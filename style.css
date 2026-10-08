@@ -886,3 +886,54 @@ footer p:first-child {
     outline: 3px solid #fca5a5;
     outline-offset: 3px;
 }
+
+
+/* Cabeçalho do painel administrativo */
+.cabecalho-painel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.logo-painel h1 {
+    margin-bottom: 5px;
+}
+
+.logo-painel p {
+    margin-top: 0;
+}
+
+/* Botão sair */
+.btn-sair {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-sair:hover {
+    background-color: #b91c1c;
+}
+
+.btn-sair:focus-visible {
+    outline: 3px solid #fca5a5;
+    outline-offset: 3px;
+}
+
+/* Ajustes para celular */
+@media (max-width: 480px) {
+    .cabecalho-painel {
+        align-items: flex-start;
+    }
+
+    .btn-sair {
+        width: 100%;
+    }
+}
