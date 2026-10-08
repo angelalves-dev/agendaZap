@@ -1,9 +1,9 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Painel - AgendaZap</title>
@@ -13,44 +13,36 @@
 
 <body>
 
-    <!-- ======================================
-         CABEÇALHO
-    ======================================= -->
-    
-<button type="button" id="btnSair" class="btn-sair" onclick="sair()">
-    Sair da conta
-</button>
-
-
+    <!-- CABEÇALHO -->
     <header class="header">
+        <div class="container cabecalho-painel">
 
-        <div class="container">
+            <div class="logo-painel">
+                <h1>AgendaZap</h1>
+                <p>Painel de Agendamentos</p>
+            </div>
 
-            <h1>AgendaZap</h1>
-
-            <p>Painel de Agendamentos</p>
+            <button
+                type="button"
+                id="btnSair"
+                class="btn-sair"
+                onclick="sair()"
+            >
+                Sair da conta
+            </button>
 
         </div>
-
     </header>
 
-
-    <!-- ======================================
-         PAINEL
-    ======================================= -->
-
+    <!-- PAINEL -->
     <main class="painel-container">
 
         <div class="painel-topo">
-
             <div>
-
                 <h2>Agendamentos</h2>
-
                 <p>
                     Veja os agendamentos realizados pelos clientes.
                 </p>
-
             </div>
 
             <button
@@ -60,14 +52,9 @@
             >
                 🔄 Atualizar
             </button>
-
         </div>
 
-
-        <!-- ==================================
-             FILTRO DE DATA
-        =================================== -->
-
+        <!-- FILTRO DE DATA -->
         <div class="filtro">
 
             <label for="filtroData">
@@ -77,7 +64,6 @@
             <input
                 type="date"
                 id="filtroData"
-                onchange="carregarAgendamentos()"
             >
 
             <button
@@ -90,28 +76,16 @@
 
         </div>
 
-
-        <!-- ==================================
-             CONTADOR
-        =================================== -->
-
+        <!-- CONTADOR -->
         <div class="contador">
 
-            <strong id="totalAgendamentos">
-                0
-            </strong>
+            <strong id="totalAgendamentos">0</strong>
 
-            <span>
-                agendamento(s)
-            </span>
+            <span>agendamento(s)</span>
 
         </div>
 
-
-        <!-- ==================================
-             LISTA DE AGENDAMENTOS
-        =================================== -->
-
+        <!-- LISTA DE AGENDAMENTOS -->
         <section id="listaAgendamentos">
 
             <div class="carregando">
@@ -122,15 +96,11 @@
 
     </main>
 
-
-    <!-- ======================================
-         SUPABASE
-    ======================================= -->
-
+    <!-- SUPABASE -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script src="painel.js"></script>
 
 </body>
-
 </html>
+```
