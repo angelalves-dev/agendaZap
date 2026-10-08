@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AgendaZap</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- CABEÇALHO -->
+    <header class="header">
+
+        <div class="logo">
+            Agenda<span>Zap</span>
+        </div>
+
+        <button
+            class="btn-login"
+            onclick="alert('Área do estabelecimento em breve!')">
+            Entrar
+        </button>
+
+    </header>
+
+
+    <!-- PRINCIPAL -->
+    <main>
+
+        <!-- HERO -->
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <span class="badge">
+                    Agendamento simples
+                </span>
+
+                <h1>
+                    Seu horário marcado
+                    <span>sem complicação.</span>
+                </h1>
+
+                <p>
+                    Escolha o serviço, o melhor horário
+                    e envie seu agendamento em poucos passos.
+                </p>
+
+                <button
+                    class="btn-primary"
+                    onclick="abrirAgendamento()">
+
+                    Agendar meu horário
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- SERVIÇOS -->
+        <section class="servicos">
+
+            <h2>
+                Nossos serviços
+            </h2>
+
+            <p class="subtitulo">
+                Escolha o serviço que deseja agendar.
+            </p>
+
+
+            <div class="servicos-grid">
+
+
+                <!-- SERVIÇO 1 -->
+                <button
+                    type="button"
+                    class="servico"
+                    onclick="selecionarServico('Corte', 30)">
+
+                    <div class="icone">
+                        ✂️
+                    </div>
+
+                    <h3>
+                        Corte
+                    </h3>
+
+                    <p>
+                        Corte masculino
+                    </p>
+
+                    <strong>
+                        R$ 30
+                    </strong>
+
+                </button>
+
+
+                <!-- SERVIÇO 2 -->
+                <button
+                    type="button"
+                    class="servico"
+                    onclick="selecionarServico('Corte + Barba', 50)">
+
+                    <div class="icone">
+                        💈
+                    </div>
+
+                    <h3>
+                        Corte + Barba
+                    </h3>
+
+                    <p>
+                        Corte completo
+                    </p>
+
+                    <strong>
+                        R$ 50
+                    </strong>
+
+                </button>
+
+
+                <!-- SERVIÇO 3 -->
+                <button
+                    type="button"
+                    class="servico"
+                    onclick="selecionarServico('Barba', 25)">
+
+                    <div class="icone">
+                        🧔
+                    </div>
+
+                    <h3>
+                        Barba
+                    </h3>
+
+                    <p>
+                        Modelagem da barba
+                    </p>
+
+                    <strong>
+                        R$ 25
+                    </strong>
+
+                </button>
+
+
+            </div>
+
+        </section>
+
+
+        <!-- ÁREA DE AGENDAMENTO -->
+        <section
+            id="agendamento"
+            class="agendamento escondido">
+
+            <div class="agendamento-box">
+
+                <h2>
+                    Agendar horário
+                </h2>
+
+
+                <!-- SERVIÇO SELECIONADO -->
+                <div class="passo">
+
+                    <span>
+                        1
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            Serviço
+                        </strong>
+
+                        <p id="servicoSelecionado">
+                            Nenhum serviço selecionado
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DATA -->
+                <label for="data">
+                    Data
+                </label>
+
+                <input
+                    type="date"
+                    id="data">
+
+
+                <!-- HORÁRIO -->
+                <label for="horario">
+                    Horário
+                </label>
+
+                <select id="horario">
+
+                    <option value="">
+                        Escolha um horário
+                    </option>
+
+                    <option value="08:00">
+                        08:00
+                    </option>
+
+                    <option value="09:00">
+                        09:00
+                    </option>
+
+                    <option value="10:00">
+                        10:00
+                    </option>
+
+                    <option value="11:00">
+                        11:00
+                    </option>
+
+                    <option value="13:00">
+                        13:00
+                    </option>
+
+                    <option value="14:00">
+                        14:00
+                    </option>
+
+                    <option value="15:00">
+                        15:00
+                    </option>
+
+                    <option value="16:00">
+                        16:00
+                    </option>
+
+                    <option value="17:00">
+                        17:00
+                    </option>
+
+                </select>
+
+
+                <!-- NOME -->
+                <label for="nome">
+                    Seu nome
+                </label>
+
+                <input
+                    type="text"
+                    id="nome"
+                    placeholder="Digite seu nome">
+
+
+                <!-- WHATSAPP -->
+                <label for="whatsapp">
+                    WhatsApp
+                </label>
+
+                <input
+                    type="tel"
+                    id="whatsapp"
+                    placeholder="(92) 99999-9999">
+
+
+                <!-- CONFIRMAR -->
+                <button
+                    type="button"
+                    class="btn-primary"
+                    onclick="confirmarAgendamento()">
+
+                    Confirmar agendamento
+
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- SUCESSO -->
+        <section
+            id="sucesso"
+            class="sucesso escondido">
+
+            <div>
+
+                <div class="check">
+                    ✓
+                </div>
+
+                <h2>
+                    Agendamento enviado!
+                </h2>
+
+                <p>
+                    Seu pedido de agendamento foi registrado.
+                </p>
+
+                <button
+                    type="button"
+                    class="btn-primary"
+                    onclick="voltarInicio()">
+
+                    Voltar
+
+                </button>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- RODAPÉ -->
+    <footer>
+
+        <p>
+            AgendaZap © 2026
+        </p>
+
+        <p>
+            Agendamento simples para pequenos negócios.
+        </p>
+
+    </footer>
+
+
+    <!-- SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- NOSSO JAVASCRIPT -->
+    <script src="script.js"></script>
+
+</body>
+
+</html>

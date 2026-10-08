@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Painel - AgendaZap</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ======================================
+         CABEÇALHO
+    ======================================= -->
+
+    <header class="header">
+
+        <div class="container">
+
+            <h1>AgendaZap</h1>
+
+            <p>Painel de Agendamentos</p>
+
+        </div>
+
+    </header>
+
+
+    <!-- ======================================
+         PAINEL
+    ======================================= -->
+
+    <main class="painel-container">
+
+        <div class="painel-topo">
+
+            <div>
+
+                <h2>Agendamentos</h2>
+
+                <p>
+                    Veja os agendamentos realizados pelos clientes.
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn-primary"
+                onclick="carregarAgendamentos()"
+            >
+                🔄 Atualizar
+            </button>
+
+        </div>
+
+
+        <!-- ==================================
+             FILTRO DE DATA
+        =================================== -->
+
+        <div class="filtro">
+
+            <label for="filtroData">
+                Filtrar por data
+            </label>
+
+            <input
+                type="date"
+                id="filtroData"
+                onchange="carregarAgendamentos()"
+            >
+
+            <button
+                type="button"
+                class="btn-secundario"
+                onclick="mostrarTodos()"
+            >
+                Mostrar todos
+            </button>
+
+        </div>
+
+
+        <!-- ==================================
+             CONTADOR
+        =================================== -->
+
+        <div class="contador">
+
+            <strong id="totalAgendamentos">
+                0
+            </strong>
+
+            <span>
+                agendamento(s)
+            </span>
+
+        </div>
+
+
+        <!-- ==================================
+             LISTA DE AGENDAMENTOS
+        =================================== -->
+
+        <section id="listaAgendamentos">
+
+            <div class="carregando">
+                Carregando agendamentos...
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ======================================
+         SUPABASE
+    ======================================= -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="painel.js"></script>
+
+</body>
+
+</html>
