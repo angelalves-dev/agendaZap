@@ -170,6 +170,7 @@ async function confirmarAgendamento() {
             .from("agendamentos")
 
             .insert({
+                negocio_id: "60b419c8-3981-44b0-a319-d1542b3b210a",
 
                 servico: servicoAtual,
 
