@@ -15,6 +15,7 @@
 
     const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
     const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
+    const NEGOCIO_ID = "60b419c8-3981-44b0-a319-d1542b3b210a";
 
     let supabaseClient;
     let agendamentos = [];
@@ -193,12 +194,13 @@
 
         try {
             const { data, error } = await supabaseClient
-                .from("agendamentos")
-                .select(
-                    "id, created_at, servico, preco, data, horario, nome, whatsapp, status"
-                )
-                .order("data", { ascending: true })
-                .order("horario", { ascending: true });
+    .from("agendamentos")
+    .select(
+        "id, created_at, servico, preco, data, horario, nome, whatsapp, status, negocio_id"
+    )
+    .eq("negocio_id", NEGOCIO_ID)
+    .order("data", { ascending: true })
+    .order("horario", { ascending: true });
 
             if (error) throw error;
 
