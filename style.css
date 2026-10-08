@@ -863,3 +863,26 @@ footer p:first-child {
 
     font-weight: bold;
 }
+
+
+/* Botão sair do painel AgendaZap */
+.btn-sair {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-sair:hover {
+    background-color: #b91c1c;
+}
+
+.btn-sair:focus-visible {
+    outline: 3px solid #fca5a5;
+    outline-offset: 3px;
+}
