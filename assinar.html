@@ -1,0 +1,246 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AgendaZap: organize agendamentos, gerencie clientes e simplifique sua rotina.">
+    <title>Assine o AgendaZap</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f8f7;
+            color: #17352d;
+        }
+
+        .assinar-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2ebe7;
+            padding: 18px 6%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .assinar-logo {
+            font-size: 25px;
+            font-weight: 800;
+            color: #087f5b;
+            text-decoration: none;
+        }
+
+        .assinar-login {
+            color: #087f5b;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .assinar-principal {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 75px 20px;
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            align-items: center;
+            gap: 55px;
+        }
+
+        .assinar-etiqueta {
+            display: inline-block;
+            padding: 8px 13px;
+            border-radius: 30px;
+            background: #dff7ed;
+            color: #087f5b;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .assinar-texto h1 {
+            margin: 20px 0;
+            font-size: clamp(36px, 5vw, 54px);
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+        }
+
+        .assinar-texto h1 span {
+            color: #087f5b;
+        }
+
+        .assinar-texto > p {
+            color: #5d716a;
+            font-size: 18px;
+            line-height: 1.7;
+        }
+
+        .assinar-beneficios {
+            list-style: none;
+            padding: 0;
+            margin-top: 28px;
+        }
+
+        .assinar-beneficios li {
+            margin: 15px 0;
+            font-size: 16px;
+        }
+
+        .assinar-beneficios li::before {
+            content: "✓";
+            color: #087f5b;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .assinar-card {
+            background: #ffffff;
+            padding: 32px;
+            border-radius: 20px;
+            box-shadow: 0 15px 45px rgba(18, 74, 56, 0.10);
+            border: 1px solid #e4eee9;
+        }
+
+        .assinar-card h2 {
+            margin-top: 0;
+            font-size: 23px;
+        }
+
+        .assinar-preco {
+            margin: 22px 0;
+            font-size: 43px;
+            font-weight: 800;
+            color: #087f5b;
+        }
+
+        .assinar-preco small {
+            font-size: 15px;
+            font-weight: normal;
+            color: #64756e;
+        }
+
+        .assinar-nota {
+            color: #64756e;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .assinar-botao {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin: 24px 0 14px;
+            border-radius: 10px;
+            background: #087f5b;
+            color: #ffffff;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .assinar-botao:hover {
+            background: #066b4d;
+        }
+
+        .assinar-rodape {
+            padding: 24px;
+            text-align: center;
+            color: #64756e;
+            font-size: 13px;
+        }
+
+        @media (max-width: 760px) {
+            .assinar-principal {
+                grid-template-columns: 1fr;
+                gap: 35px;
+                padding-top: 45px;
+            }
+
+            .assinar-texto h1 {
+                font-size: 38px;
+            }
+
+            .assinar-card {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="assinar-header">
+        <a href="index.html" class="assinar-logo">AgendaZap</a>
+        <a href="login.html" class="assinar-login">Entrar na conta</a>
+    </header>
+
+    <main class="assinar-principal">
+
+        <section class="assinar-texto">
+            <span class="assinar-etiqueta">MAIS ORGANIZAÇÃO PARA SEU NEGÓCIO</span>
+
+            <h1>
+                Seus agendamentos<br>
+                <span>em um só lugar.</span>
+            </h1>
+
+            <p>
+                Organize os horários dos seus clientes com o AgendaZap.
+                Simplifique sua rotina e tenha mais controle sobre os
+                agendamentos do seu negócio.
+            </p>
+
+            <ul class="assinar-beneficios">
+                <li>Página para receber agendamentos online</li>
+                <li>Painel para acompanhar os clientes</li>
+                <li>Confirmação e cancelamento de horários</li>
+                <li>Contato com clientes pelo WhatsApp</li>
+            </ul>
+        </section>
+
+        <section class="assinar-card">
+            <h2>AgendaZap Básico</h2>
+
+            <p class="assinar-nota">
+                Plano mensal para organizar os agendamentos do seu negócio.
+            </p>
+
+            <div class="assinar-preco">
+                R$ 39<small>/mês</small>
+            </div>
+
+            <p class="assinar-nota">
+                A assinatura é processada pelo Mercado Pago. Confira as
+                condições de cobrança apresentadas na página de pagamento.
+            </p>
+
+            <a
+                class="assinar-botao"
+                href="https://mpago.la/1JF2fsR"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Assinar AgendaZap
+            </a>
+
+            <p class="assinar-nota">
+                O pagamento é realizado em uma página externa do Mercado Pago.
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="assinar-rodape">
+        © 2026 AgendaZap — Organização para o seu negócio.
+    </footer>
+
+</body>
+</html>
+```
