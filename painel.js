@@ -15,7 +15,7 @@
 
     const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
     const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
-    const NEGOCIO_ID = "60b419c8-3981-44b0-a319-d1542b3b210a";
+    let NEGOCIO_ID = null;
 
     let supabaseClient;
     let agendamentos = [];
@@ -140,6 +140,37 @@
                 "erro"
             );
             return;
+
+            
+const usuarioId = data.session.user.id;
+
+const { data: negocio, error: erroNegocio } =
+    await supabaseClient
+        .from("negocios")
+        .select("id, nome")
+        .eq("dono_id", usuarioId)
+        .maybeSingle();
+
+if (erroNegocio) {
+    console.error("Erro ao buscar negócio:", erroNegocio);
+
+    mostrarMensagem(
+        "Não foi possível identificar seu negócio. Verifique as permissões da tabela negocios.",
+        "erro"
+    );
+    return;
+}
+
+if (!negocio) {
+    mostrarMensagem(
+        "Sua conta ainda não possui um negócio cadastrado. Entre em contato com o suporte.",
+        "erro"
+    );
+    return;
+}
+
+NEGOCIO_ID = negocio.id;
+
         }
 
         try {
@@ -485,6 +516,7 @@
                         .from("agendamentos")
                         .update({ status: novoStatus })
                         .eq("id", id)
+                        .eq("negocio_id", NEGOCIO_ID)
                         .select("id, status");
 
                     if (error) throw error;
