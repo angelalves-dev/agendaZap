@@ -1,3 +1,7 @@
+```javascript
+// ==========================================
+// CONFIGURAÇÃO DO SUPABASE
+// ==========================================
 
 const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
@@ -7,14 +11,20 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
-// Identifica a barbearia pela URL.
-// Se não houver parâmetro, mantém a Agenda Angel como padrão.
+// ==========================================
+// IDENTIFICAR A BARBEARIA PELA URL
+// ==========================================
+
 const parametros = new URLSearchParams(window.location.search);
 const slugNegocio = parametros.get("negocio") || "agenda-angel";
 
 let negocioAtual = null;
 let servicosDisponiveis = [];
 let servicoAtual = null;
+
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
 
 document.addEventListener("DOMContentLoaded", async function () {
     const campoData = document.getElementById("data");
@@ -31,12 +41,20 @@ document.addEventListener("DOMContentLoaded", async function () {
     await carregarNegocioEServicos();
 });
 
+// ==========================================
+// FORMATAÇÃO
+// ==========================================
+
 function formatarPreco(preco) {
     return Number(preco).toLocaleString("pt-BR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 }
+
+// ==========================================
+// CARREGAR BARBEARIA E SERVIÇOS
+// ==========================================
 
 async function carregarNegocioEServicos() {
     try {
@@ -50,8 +68,8 @@ async function carregarNegocioEServicos() {
         if (erroNegocio) throw erroNegocio;
 
         if (!negocio) {
-            alert("Barbearia não encontrada. Confira o link.");
             desativarServicos();
+            alert("Barbearia não encontrada. Confira o link.");
             return;
         }
 
@@ -71,19 +89,19 @@ async function carregarNegocioEServicos() {
         atualizarCartoesDeServicos();
 
         if (servicosDisponiveis.length === 0) {
-            alert(
-                "Esta barbearia ainda não cadastrou serviços. " +
-                "Entre em contato com o responsável."
-            );
+            alert("Esta barbearia ainda não possui serviços cadastrados.");
         }
+
     } catch (erro) {
-        console.error("Erro ao carregar a barbearia:", erro);
-        alert(
-            "Não foi possível carregar os serviços. " +
-            "Confira sua conexão e as permissões do Supabase."
-        );
+        console.error("Erro ao carregar barbearia:", erro);
+        desativarServicos();
+        alert("Não foi possível carregar os serviços. Tente novamente.");
     }
 }
+
+// ==========================================
+// MOSTRAR SERVIÇOS
+// ==========================================
 
 function desativarServicos() {
     document.querySelectorAll(".servico").forEach(botao => {
@@ -95,9 +113,10 @@ function atualizarCartoesDeServicos() {
     const botoes = document.querySelectorAll(".servico");
 
     botoes.forEach(botao => {
-        // Lê o nome que já está definido no onclick do HTML.
-        const onclick = botao.getAttribute("onclick") || "";
-        const resultado = onclick.match(
+        // Guardar o nome original antes de remover o onclick.
+        const onclickOriginal = botao.getAttribute("onclick") || "";
+
+        const resultado = onclickOriginal.match(
             /selecionarServico\(\s*['"]([^'"]+)['"]/
         );
 
@@ -112,7 +131,7 @@ function atualizarCartoesDeServicos() {
             item => item.nome === nomeHtml
         );
 
-        if (!servico) {
+        if (!servico || !servico.id) {
             botao.hidden = true;
             return;
         }
@@ -131,32 +150,37 @@ function atualizarCartoesDeServicos() {
                 `R$ ${formatarPreco(servico.preco)}`;
         }
 
-        // Remove o evento antigo do HTML
-        // e conecta o serviço encontrado no Supabase.
+        // Remover o evento inline para não enviar argumentos antigos.
         botao.removeAttribute("onclick");
 
+        // Usar diretamente o registro recebido do Supabase.
         botao.onclick = function () {
-            selecionarServico(servico.nome);
+            selecionarServicoPorId(servico.id);
         };
     });
 }
 
-function abrirAgendamento() {
-    const area = document.getElementById("agendamento");
+// ==========================================
+// SELECIONAR SERVIÇO PELO UUID
+// ==========================================
 
-    if (area) {
-        area.classList.remove("escondido");
-        area.scrollIntoView({ behavior: "smooth" });
-    }
-}
-
-function selecionarServico(nome) {
+function selecionarServicoPorId(id) {
     const servico = servicosDisponiveis.find(
-        item => item.nome === nome
+        item => String(item.id) === String(id)
     );
 
     if (!servico) {
-        alert("Este serviço não está disponível.");
+        alert("Serviço não encontrado. Atualize a página e tente novamente.");
+        return;
+    }
+
+    // Garantir que o serviço selecionado tenha um UUID.
+    const uuidValido =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidValido.test(String(servico.id))) {
+        console.error("ID inválido recebido do Supabase:", servico.id);
+        alert("O identificador do serviço está inválido. Avise o responsável.");
         return;
     }
 
@@ -173,6 +197,37 @@ function selecionarServico(nome) {
     abrirAgendamento();
 }
 
+// Compatibilidade com chamadas antigas do HTML.
+function selecionarServico(nome) {
+    const servico = servicosDisponiveis.find(
+        item => item.nome === nome
+    );
+
+    if (!servico) {
+        alert("Este serviço não está disponível.");
+        return;
+    }
+
+    selecionarServicoPorId(servico.id);
+}
+
+// ==========================================
+// ABRIR AGENDAMENTO
+// ==========================================
+
+function abrirAgendamento() {
+    const area = document.getElementById("agendamento");
+
+    if (area) {
+        area.classList.remove("escondido");
+        area.scrollIntoView({ behavior: "smooth" });
+    }
+}
+
+// ==========================================
+// CONFIRMAR AGENDAMENTO
+// ==========================================
+
 async function confirmarAgendamento() {
     const campoData = document.getElementById("data");
     const campoHorario = document.getElementById("horario");
@@ -184,8 +239,8 @@ async function confirmarAgendamento() {
         return;
     }
 
-    if (!servicoAtual) {
-        alert("Escolha um serviço primeiro.");
+    if (!servicoAtual || !servicoAtual.id) {
+        alert("Escolha um serviço antes de continuar.");
         return;
     }
 
@@ -199,23 +254,42 @@ async function confirmarAgendamento() {
         return;
     }
 
+    const uuidValido =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!uuidValido.test(String(servicoAtual.id))) {
+        console.error("UUID de serviço inválido:", servicoAtual.id);
+        alert("O serviço selecionado possui um identificador inválido.");
+        return;
+    }
+
     const botaoConfirmar = document.querySelector(
         'button[onclick="confirmarAgendamento()"]'
     );
 
-    if (botaoConfirmar) botaoConfirmar.disabled = true;
+    if (botaoConfirmar) {
+        botaoConfirmar.disabled = true;
+    }
 
     try {
+        // Enviar o UUID real do serviço cadastrado no banco.
+        const argumentos = {
+            p_slug: slugNegocio,
+            p_servico_id: String(servicoAtual.id),
+            p_data: data,
+            p_horario: String(horario),
+            p_nome: nome,
+            p_whatsapp: whatsapp
+        };
+
+        console.log("Enviando agendamento:", {
+            ...argumentos,
+            p_whatsapp: "[oculto]"
+        });
+
         const { data: resultado, error } = await supabaseClient.rpc(
             "criar_agendamento_publico",
-            {
-                p_slug: slugNegocio,
-                p_servico_id: servicoAtual.id,
-                p_data: data,
-                p_horario: horario,
-                p_nome: nome,
-                p_whatsapp: whatsapp
-            }
+            argumentos
         );
 
         if (error) throw error;
@@ -225,9 +299,13 @@ async function confirmarAgendamento() {
         alert("Agendamento realizado com sucesso!");
 
         const area = document.getElementById("agendamento");
-        if (area) area.classList.add("escondido");
+
+        if (area) {
+            area.classList.add("escondido");
+        }
 
         const sucesso = document.getElementById("sucesso");
+
         if (sucesso) {
             sucesso.classList.remove("escondido");
             sucesso.scrollIntoView({ behavior: "smooth" });
@@ -235,33 +313,57 @@ async function confirmarAgendamento() {
 
         limparFormulario();
         servicoAtual = null;
+
     } catch (erro) {
         console.error("Erro ao criar agendamento:", erro);
+
         alert(
             "Não foi possível realizar o agendamento.\n\n" +
             (erro.message || "Tente novamente.")
         );
+
     } finally {
-        if (botaoConfirmar) botaoConfirmar.disabled = false;
+        if (botaoConfirmar) {
+            botaoConfirmar.disabled = false;
+        }
     }
 }
+
+// ==========================================
+// LIMPAR FORMULÁRIO
+// ==========================================
 
 function limparFormulario() {
     ["data", "horario", "nome", "whatsapp"].forEach(id => {
         const campo = document.getElementById(id);
-        if (campo) campo.value = "";
+
+        if (campo) {
+            campo.value = "";
+        }
     });
 }
 
+// ==========================================
+// VOLTAR PARA O INÍCIO
+// ==========================================
+
 function voltarInicio() {
     const sucesso = document.getElementById("sucesso");
-    if (sucesso) sucesso.classList.add("escondido");
+
+    if (sucesso) {
+        sucesso.classList.add("escondido");
+    }
 
     const inicio = document.querySelector("header");
+
     if (inicio) {
         inicio.scrollIntoView({ behavior: "smooth" });
     }
 }
+
+// ==========================================
+// TESTAR CONEXÃO
+// ==========================================
 
 async function testarConexao() {
     try {
@@ -277,8 +379,10 @@ async function testarConexao() {
         }
 
         return Boolean(data);
+
     } catch (erro) {
         console.error("Erro inesperado:", erro);
         return false;
     }
 }
+```
