@@ -1,6 +1,3 @@
-// ==========================================
-// CONFIGURAÇÃO DO SUPABASE
-// ==========================================
 
 const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
@@ -10,27 +7,20 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
+// Identifica a barbearia pela URL.
+// Se não houver parâmetro, mantém a Agenda Angel como padrão.
+const parametros = new URLSearchParams(window.location.search);
+const slugNegocio = parametros.get("negocio") || "agenda-angel";
 
-// ==========================================
-// VARIÁVEIS
-// ==========================================
+let negocioAtual = null;
+let servicosDisponiveis = [];
+let servicoAtual = null;
 
-let servicoAtual = "";
-let precoAtual = 0;
-
-
-// ==========================================
-// QUANDO A PÁGINA CARREGAR
-// ==========================================
-
-document.addEventListener("DOMContentLoaded", function () {
-
-    // Coloca a data mínima como hoje
+document.addEventListener("DOMContentLoaded", async function () {
     const campoData = document.getElementById("data");
 
     if (campoData) {
         const hoje = new Date();
-
         const ano = hoje.getFullYear();
         const mes = String(hoje.getMonth() + 1).padStart(2, "0");
         const dia = String(hoje.getDate()).padStart(2, "0");
@@ -38,344 +28,254 @@ document.addEventListener("DOMContentLoaded", function () {
         campoData.min = `${ano}-${mes}-${dia}`;
     }
 
+    await carregarNegocioEServicos();
 });
 
-
-// ==========================================
-// ABRIR ÁREA DE AGENDAMENTO
-// ==========================================
-
-function abrirAgendamento() {
-
-    const areaAgendamento = document.getElementById("agendamento");
-
-    if (areaAgendamento) {
-        areaAgendamento.classList.remove("escondido");
-
-        areaAgendamento.scrollIntoView({
-            behavior: "smooth"
-        });
-    }
-
+function formatarPreco(preco) {
+    return Number(preco).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 }
 
-
-// ==========================================
-// SELECIONAR SERVIÇO
-// ==========================================
-
-function selecionarServico(nome, preco) {
-
-    console.log("Serviço selecionado:", nome);
-    console.log("Preço:", preco);
-
-    // Salvar serviço escolhido
-    servicoAtual = nome;
-    precoAtual = preco;
-
-    // Mostrar serviço escolhido na tela
-    const servicoSelecionado =
-        document.getElementById("servicoSelecionado");
-
-    if (servicoSelecionado) {
-
-        servicoSelecionado.textContent =
-            `${nome} - R$ ${Number(preco).toFixed(2).replace(".", ",")}`;
-
-    }
-
-    // Abrir formulário
-    abrirAgendamento();
-
-}
-
-
-// ==========================================
-// CONFIRMAR AGENDAMENTO
-// ==========================================
-
-async function confirmarAgendamento() {
-
-    // Pegar valores dos campos
-    const data = document.getElementById("data").value;
-    const horario = document.getElementById("horario").value;
-    const nome = document.getElementById("nome").value.trim();
-    const whatsapp = document.getElementById("whatsapp").value.trim();
-
-
-    // ======================================
-    // VALIDAÇÕES
-    // ======================================
-
-    if (!servicoAtual) {
-
-        alert("Escolha um serviço primeiro.");
-
-        return;
-    }
-
-
-    if (!data) {
-
-        alert("Escolha uma data.");
-
-        return;
-    }
-
-
-    if (!horario) {
-
-        alert("Escolha um horário.");
-
-        return;
-    }
-
-
-    if (!nome) {
-
-        alert("Digite seu nome.");
-
-        return;
-    }
-
-
-    if (!whatsapp) {
-
-        alert("Digite seu WhatsApp.");
-
-        return;
-    }
-
-
-    // ======================================
-    // ENVIAR PARA O SUPABASE
-    // ======================================
-
+async function carregarNegocioEServicos() {
     try {
+        const { data: negocio, error: erroNegocio } =
+            await supabaseClient
+                .from("negocios")
+                .select("id, nome, slug")
+                .eq("slug", slugNegocio)
+                .maybeSingle();
 
-        console.log("Enviando agendamento...");
+        if (erroNegocio) throw erroNegocio;
 
-        console.log({
-            servico: servicoAtual,
-            preco: precoAtual,
-            data: data,
-            horario: horario,
-            nome: nome,
-            whatsapp: whatsapp
-        });
-
-
-        const { error } = await supabaseClient
-
-            .from("agendamentos")
-
-            .insert({
-                negocio_id: "60b419c8-3981-44b0-a319-d1542b3b210a",
-
-                servico: servicoAtual,
-
-                preco: precoAtual,
-
-                data: data,
-
-                horario: horario,
-
-                nome: nome,
-
-                whatsapp: whatsapp,
-
-                status: "pendente"
-
-            });
-
-
-        // ==================================
-        // VERIFICAR ERRO
-        // ==================================
-
-        if (error) {
-
-            console.error(
-                "Erro ao salvar agendamento:",
-                error
-            );
-
-            alert(
-                "Erro ao salvar agendamento:\n\n" +
-                error.message
-            );
-
+        if (!negocio) {
+            alert("Barbearia não encontrada. Confira o link.");
+            desativarServicos();
             return;
         }
 
+        negocioAtual = negocio;
 
-        // ==================================
-        // SUCESSO
-        // ==================================
+        const { data: servicos, error: erroServicos } =
+            await supabaseClient
+                .from("servicos")
+                .select("id, nome, descricao, preco")
+                .eq("negocio_id", negocio.id)
+                .eq("ativo", true);
 
-        console.log("Agendamento salvo com sucesso!");
+        if (erroServicos) throw erroServicos;
+
+        servicosDisponiveis = servicos || [];
+
+        atualizarCartoesDeServicos();
+
+        if (servicosDisponiveis.length === 0) {
+            alert(
+                "Esta barbearia ainda não cadastrou serviços. " +
+                "Entre em contato com o responsável."
+            );
+        }
+    } catch (erro) {
+        console.error("Erro ao carregar a barbearia:", erro);
+        alert(
+            "Não foi possível carregar os serviços. " +
+            "Confira sua conexão e as permissões do Supabase."
+        );
+    }
+}
+
+function desativarServicos() {
+    document.querySelectorAll(".servico").forEach(botao => {
+        botao.hidden = true;
+    });
+}
+
+function atualizarCartoesDeServicos() {
+    const botoes = document.querySelectorAll(".servico");
+
+    botoes.forEach(botao => {
+        // Lê o nome que já está definido no onclick do HTML.
+        const onclick = botao.getAttribute("onclick") || "";
+        const resultado = onclick.match(
+            /selecionarServico\(\s*['"]([^'"]+)['"]/
+        );
+
+        if (!resultado) {
+            botao.hidden = true;
+            return;
+        }
+
+        const nomeHtml = resultado[1];
+
+        const servico = servicosDisponiveis.find(
+            item => item.nome === nomeHtml
+        );
+
+        if (!servico) {
+            botao.hidden = true;
+            return;
+        }
+
+        botao.hidden = false;
+
+        const descricao = botao.querySelector("p");
+        const precoElemento = botao.querySelector("strong");
+
+        if (descricao && servico.descricao) {
+            descricao.textContent = servico.descricao;
+        }
+
+        if (precoElemento) {
+            precoElemento.textContent =
+                `R$ ${formatarPreco(servico.preco)}`;
+        }
+
+        // Remove o preço fixo do HTML como fonte de decisão.
+        botao.onclick = function () {
+            selecionarServico(servico.nome);
+        };
+    });
+}
+
+function abrirAgendamento() {
+    const area = document.getElementById("agendamento");
+
+    if (area) {
+        area.classList.remove("escondido");
+        area.scrollIntoView({ behavior: "smooth" });
+    }
+}
+
+function selecionarServico(nome) {
+    const servico = servicosDisponiveis.find(
+        item => item.nome === nome
+    );
+
+    if (!servico) {
+        alert("Este serviço não está disponível.");
+        return;
+    }
+
+    servicoAtual = servico;
+
+    const campoServico =
+        document.getElementById("servicoSelecionado");
+
+    if (campoServico) {
+        campoServico.textContent =
+            `${servico.nome} - R$ ${formatarPreco(servico.preco)}`;
+    }
+
+    abrirAgendamento();
+}
+
+async function confirmarAgendamento() {
+    const campoData = document.getElementById("data");
+    const campoHorario = document.getElementById("horario");
+    const campoNome = document.getElementById("nome");
+    const campoWhatsapp = document.getElementById("whatsapp");
+
+    if (!negocioAtual) {
+        alert("Aguarde o carregamento da barbearia.");
+        return;
+    }
+
+    if (!servicoAtual) {
+        alert("Escolha um serviço primeiro.");
+        return;
+    }
+
+    const data = campoData?.value;
+    const horario = campoHorario?.value;
+    const nome = campoNome?.value.trim();
+    const whatsapp = campoWhatsapp?.value.trim();
+
+    if (!data || !horario || !nome || !whatsapp) {
+        alert("Preencha todos os campos do agendamento.");
+        return;
+    }
+
+    const botaoConfirmar = document.querySelector(
+        'button[onclick="confirmarAgendamento()"]'
+    );
+
+    if (botaoConfirmar) botaoConfirmar.disabled = true;
+
+    try {
+        const { data: resultado, error } = await supabaseClient.rpc(
+            "criar_agendamento_publico",
+            {
+                p_slug: slugNegocio,
+                p_servico_id: servicoAtual.id,
+                p_data: data,
+                p_horario: horario,
+                p_nome: nome,
+                p_whatsapp: whatsapp
+            }
+        );
+
+        if (error) throw error;
+
+        console.log("Agendamento criado:", resultado);
 
         alert("Agendamento realizado com sucesso!");
 
+        const area = document.getElementById("agendamento");
+        if (area) area.classList.add("escondido");
 
-        // Esconder formulário
-        const areaAgendamento =
-            document.getElementById("agendamento");
-
-        if (areaAgendamento) {
-
-            areaAgendamento.classList.add("escondido");
-
+        const sucesso = document.getElementById("sucesso");
+        if (sucesso) {
+            sucesso.classList.remove("escondido");
+            sucesso.scrollIntoView({ behavior: "smooth" });
         }
 
-
-        // Mostrar mensagem de sucesso
-        const areaSucesso =
-            document.getElementById("sucesso");
-
-        if (areaSucesso) {
-
-            areaSucesso.classList.remove("escondido");
-
-            areaSucesso.scrollIntoView({
-                behavior: "smooth"
-            });
-
-        }
-
-
-        // Limpar formulário
         limparFormulario();
-
+        servicoAtual = null;
     } catch (erro) {
-
-        console.error(
-            "Erro inesperado:",
-            erro
-        );
-
+        console.error("Erro ao criar agendamento:", erro);
         alert(
-            "Erro inesperado:\n\n" +
-            erro.message
+            "Não foi possível realizar o agendamento.\n\n" +
+            (erro.message || "Tente novamente.")
         );
-
+    } finally {
+        if (botaoConfirmar) botaoConfirmar.disabled = false;
     }
-
 }
-
-
-// ==========================================
-// LIMPAR FORMULÁRIO
-// ==========================================
 
 function limparFormulario() {
-
-    const campoData =
-        document.getElementById("data");
-
-    const campoHorario =
-        document.getElementById("horario");
-
-    const campoNome =
-        document.getElementById("nome");
-
-    const campoWhatsapp =
-        document.getElementById("whatsapp");
-
-
-    if (campoData) {
-        campoData.value = "";
-    }
-
-    if (campoHorario) {
-        campoHorario.value = "";
-    }
-
-    if (campoNome) {
-        campoNome.value = "";
-    }
-
-    if (campoWhatsapp) {
-        campoWhatsapp.value = "";
-    }
-
+    ["data", "horario", "nome", "whatsapp"].forEach(id => {
+        const campo = document.getElementById(id);
+        if (campo) campo.value = "";
+    });
 }
-
-
-// ==========================================
-// VOLTAR PARA O INÍCIO
-// ==========================================
 
 function voltarInicio() {
+    const sucesso = document.getElementById("sucesso");
+    if (sucesso) sucesso.classList.add("escondido");
 
-    const areaSucesso =
-        document.getElementById("sucesso");
-
-    if (areaSucesso) {
-
-        areaSucesso.classList.add("escondido");
-
-    }
-
-
-    const inicio =
-        document.querySelector("header");
-
+    const inicio = document.querySelector("header");
     if (inicio) {
-
-        inicio.scrollIntoView({
-            behavior: "smooth"
-        });
-
+        inicio.scrollIntoView({ behavior: "smooth" });
     }
-
 }
 
-
-// ==========================================
-// TESTAR CONEXÃO COM SUPABASE
-// ==========================================
-
 async function testarConexao() {
-
     try {
-
-        console.log("Testando conexão com Supabase...");
-
-        const { error } = await supabaseClient
-
-            .from("agendamentos")
-
+        const { data, error } = await supabaseClient
+            .from("negocios")
             .select("id")
-
-            .limit(1);
-
+            .eq("slug", slugNegocio)
+            .maybeSingle();
 
         if (error) {
-
-            console.error(
-                "Erro na conexão:",
-                error
-            );
-
+            console.error("Erro na conexão:", error);
             return false;
         }
 
-
-        console.log(
-            "Conexão com Supabase funcionando!"
-        );
-
-        return true;
-
+        return Boolean(data);
     } catch (erro) {
-
-        console.error(
-            "Erro inesperado na conexão:",
-            erro
-        );
-
+        console.error("Erro inesperado:", erro);
         return false;
     }
-
 }
