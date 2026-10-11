@@ -131,7 +131,10 @@ function atualizarCartoesDeServicos() {
                 `R$ ${formatarPreco(servico.preco)}`;
         }
 
-        // Remove o preço fixo do HTML como fonte de decisão.
+        // Remove o evento antigo do HTML
+        // e conecta o serviço encontrado no Supabase.
+        botao.removeAttribute("onclick");
+
         botao.onclick = function () {
             selecionarServico(servico.nome);
         };
