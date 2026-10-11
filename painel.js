@@ -1,18 +1,13 @@
-// =====================================================
-// AGENDAZAP — PAINEL ADMINISTRATIVO
-// Arquivo: painel.js
-// =====================================================
+
+ // =====================================================
+ // AGENDAZAP — PAINEL ADMINISTRATIVO
+ // Arquivo: painel.js
+ // =====================================================
 
 (() => {
     "use strict";
 
-    // -------------------------------------------------
     // 1. CONFIGURAÇÃO SUPABASE
-    // Mantenha aqui os mesmos valores do seu projeto.
-    // Use somente a chave publicável/anon no navegador.
-    // Nunca coloque a service_role ou uma chave secreta.
-    // -------------------------------------------------
-
     const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
     const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
     let NEGOCIO_ID = null;
@@ -22,16 +17,13 @@
     let filtroStatus = "todos";
     let carregando = false;
 
-    // -------------------------------------------------
     // 2. FUNÇÕES AUXILIARES
-    // -------------------------------------------------
 
     function encontrarElemento(seletores) {
         for (const seletor of seletores) {
             const elemento = document.querySelector(seletor);
             if (elemento) return elemento;
         }
-
         return null;
     }
 
@@ -56,18 +48,13 @@
         if (!data) return "Não informada";
 
         const partes = String(data).split("-");
-
-        if (partes.length !== 3) {
-            return escaparHTML(data);
-        }
+        if (partes.length !== 3) return escaparHTML(data);
 
         return `${partes[2]}/${partes[1]}/${partes[0]}`;
     }
 
     function normalizarStatus(status) {
-        return String(status || "pendente")
-            .trim()
-            .toLowerCase();
+        return String(status || "pendente").trim().toLowerCase();
     }
 
     function nomeStatus(status) {
@@ -84,9 +71,7 @@
     }
 
     function mostrarMensagem(mensagem, tipo = "info") {
-        const lista = obterLista();
-
-        lista.innerHTML = `
+        obterLista().innerHTML = `
             <div class="mensagem-painel mensagem-${escaparHTML(tipo)}">
                 ${escaparHTML(mensagem)}
             </div>
@@ -103,23 +88,18 @@
             "#lista"
         ]);
 
-        // Evita quebrar o script caso o HTML não tenha a lista.
         if (!lista) {
             lista = document.createElement("div");
             lista.id = "listaAgendamentos";
             lista.className = "lista-agendamentos";
             document.body.appendChild(lista);
-            console.warn(
-                "AgendaZap: lista não encontrada no HTML; foi criada uma área de exibição."
-            );
+            console.warn("AgendaZap: lista não encontrada no HTML; foi criada uma área de exibição.");
         }
 
         return lista;
     }
 
-    // -------------------------------------------------
     // 3. AUTENTICAÇÃO E INICIALIZAÇÃO
-    // -------------------------------------------------
 
     async function iniciarPainel() {
         if (!window.supabase || !window.supabase.createClient) {
@@ -140,40 +120,10 @@
                 "erro"
             );
             return;
-
-            
-const usuarioId = data.session.user.id;
-
-const { data: negocio, error: erroNegocio } =
-    await supabaseClient
-        .from("negocios")
-        .select("id, nome")
-        .eq("dono_id", usuarioId)
-        .maybeSingle();
-
-if (erroNegocio) {
-    console.error("Erro ao buscar negócio:", erroNegocio);
-
-    mostrarMensagem(
-        "Não foi possível identificar seu negócio. Verifique as permissões da tabela negocios.",
-        "erro"
-    );
-    return;
-}
-
-if (!negocio) {
-    mostrarMensagem(
-        "Sua conta ainda não possui um negócio cadastrado. Entre em contato com o suporte.",
-        "erro"
-    );
-    return;
-}
-
-NEGOCIO_ID = negocio.id;
-
         }
 
         try {
+            // Cria o cliente antes de consultar a sessão.
             supabaseClient = window.supabase.createClient(
                 SUPABASE_URL,
                 SUPABASE_KEY
@@ -189,7 +139,44 @@ NEGOCIO_ID = negocio.id;
                 return;
             }
 
-            // Observa expiração ou encerramento da sessão.
+            // Busca o negócio da conta atualmente conectada.
+            const usuarioId = data.session.user.id;
+
+            const {
+                data: negocio,
+                error: erroNegocio
+            } = await supabaseClient
+                .from("negocios")
+                .select("id, nome")
+                .eq("dono_id", usuarioId)
+                .maybeSingle();
+
+            if (erroNegocio) {
+                console.error("Erro ao buscar negócio:", erroNegocio);
+                mostrarMensagem(
+                    "Não foi possível identificar seu negócio. Verifique as permissões da tabela negocios.",
+                    "erro"
+                );
+                return;
+            }
+
+            if (!negocio) {
+                mostrarMensagem(
+                    "Sua conta ainda não possui um negócio cadastrado. Entre em contato com o suporte.",
+                    "erro"
+                );
+                return;
+            }
+
+            NEGOCIO_ID = negocio.id;
+
+            console.log(
+                "Negócio conectado ao painel:",
+                negocio.id,
+                negocio.nome
+            );
+
+            // Observa encerramento da sessão.
             supabaseClient.auth.onAuthStateChange((evento, sessao) => {
                 if (evento === "SIGNED_OUT" || !sessao) {
                     window.location.href = "login.html";
@@ -209,14 +196,13 @@ NEGOCIO_ID = negocio.id;
         }
     }
 
-    // -------------------------------------------------
     // 4. CARREGAR AGENDAMENTOS
-    // -------------------------------------------------
 
     async function carregarAgendamentos() {
-        if (!supabaseClient || carregando) return;
+        if (!supabaseClient || !NEGOCIO_ID || carregando) return;
 
         carregando = true;
+
         obterLista().innerHTML = `
             <div class="mensagem-painel">
                 Carregando agendamentos...
@@ -225,13 +211,13 @@ NEGOCIO_ID = negocio.id;
 
         try {
             const { data, error } = await supabaseClient
-    .from("agendamentos")
-    .select(
-        "id, created_at, servico, preco, data, horario, nome, whatsapp, status, negocio_id"
-    )
-    .eq("negocio_id", NEGOCIO_ID)
-    .order("data", { ascending: true })
-    .order("horario", { ascending: true });
+                .from("agendamentos")
+                .select(
+                    "id, created_at, servico, preco, data, horario, nome, whatsapp, status, negocio_id"
+                )
+                .eq("negocio_id", NEGOCIO_ID)
+                .order("data", { ascending: true })
+                .order("horario", { ascending: true });
 
             if (error) throw error;
 
@@ -253,10 +239,7 @@ NEGOCIO_ID = negocio.id;
         }
     }
 
-    // -------------------------------------------------
     // 5. ESTATÍSTICAS
-    // Atualiza somente os contadores que existirem no HTML.
-    // -------------------------------------------------
 
     function atualizarEstatisticas() {
         const total = agendamentos.length;
@@ -308,9 +291,7 @@ NEGOCIO_ID = negocio.id;
         if (elemento) elemento.textContent = String(texto);
     }
 
-    // -------------------------------------------------
     // 6. FILTROS DE STATUS
-    // -------------------------------------------------
 
     function configurarFiltros() {
         document.querySelectorAll("[data-filtro]").forEach(botao => {
@@ -319,9 +300,7 @@ NEGOCIO_ID = negocio.id;
             botao.dataset.agendazapListener = "sim";
 
             botao.addEventListener("click", () => {
-                filtroStatus = normalizarFiltro(
-                    botao.dataset.filtro
-                );
+                filtroStatus = normalizarFiltro(botao.dataset.filtro);
 
                 document.querySelectorAll("[data-filtro]").forEach(item => {
                     item.classList.toggle("ativo", item === botao);
@@ -342,20 +321,16 @@ NEGOCIO_ID = negocio.id;
             botaoAtualizar.dataset.agendazapListener !== "sim"
         ) {
             botaoAtualizar.dataset.agendazapListener = "sim";
-            botaoAtualizar.addEventListener(
-                "click",
-                carregarAgendamentos
-            );
+            botaoAtualizar.addEventListener("click", carregarAgendamentos);
         }
     }
 
     function normalizarFiltro(valor) {
-        const texto = String(valor || "todos")
-            .trim()
-            .toLowerCase();
+        const texto = String(valor || "todos").trim().toLowerCase();
 
         if (texto === "todos") return "todos";
         if (texto === "pendente" || texto === "pendentes") return "pendente";
+
         if (
             texto === "confirmado" ||
             texto === "confirmados" ||
@@ -370,9 +345,7 @@ NEGOCIO_ID = negocio.id;
         return texto;
     }
 
-    // -------------------------------------------------
     // 7. EXIBIR OS AGENDAMENTOS
-    // -------------------------------------------------
 
     function renderizarAgendamentos() {
         const lista = obterLista();
@@ -390,8 +363,7 @@ NEGOCIO_ID = negocio.id;
             const status = normalizarStatus(item.status);
 
             const correspondeStatus =
-                filtroStatus === "todos" ||
-                status === filtroStatus;
+                filtroStatus === "todos" || status === filtroStatus;
 
             const correspondeData =
                 !dataEscolhida || item.data === dataEscolhida;
@@ -444,7 +416,9 @@ NEGOCIO_ID = negocio.id;
                         }
 
                         ${
-                            status !== "cancelado" && status !== "concluido" && status !== "concluído"
+                            status !== "cancelado" &&
+                            status !== "concluido" &&
+                            status !== "concluído"
                                 ? `<button type="button" class="btn-acao btn-cancelar" data-acao="cancelar" data-id="${escaparHTML(item.id)}">Cancelar</button>`
                                 : ""
                         }
@@ -467,12 +441,10 @@ NEGOCIO_ID = negocio.id;
 
         if (!telefone) return "";
 
-        // Acrescenta o código do Brasil a números locais.
         if (telefone.length === 10 || telefone.length === 11) {
             telefone = "55" + telefone;
         }
 
-        // Evita gerar links inválidos.
         if (telefone.length < 12 || telefone.length > 13) {
             return "";
         }
@@ -480,9 +452,7 @@ NEGOCIO_ID = negocio.id;
         return telefone;
     }
 
-    // -------------------------------------------------
     // 8. CONFIRMAR OU CANCELAR
-    // -------------------------------------------------
 
     function configurarAcoesAgendamento(lista) {
         lista.querySelectorAll("[data-acao][data-id]").forEach(botao => {
@@ -543,9 +513,7 @@ NEGOCIO_ID = negocio.id;
         });
     }
 
-    // -------------------------------------------------
     // 9. FILTRAR POR DATA
-    // -------------------------------------------------
 
     function configurarFiltroData() {
         const campo = encontrarElemento([
@@ -563,9 +531,7 @@ NEGOCIO_ID = negocio.id;
         campo.addEventListener("change", renderizarAgendamentos);
     }
 
-    // -------------------------------------------------
     // 10. SAIR DA CONTA
-    // -------------------------------------------------
 
     async function sair() {
         if (!supabaseClient) {
@@ -584,8 +550,8 @@ NEGOCIO_ID = negocio.id;
         window.location.href = "login.html";
     }
 
-    // Funções disponíveis para botões do HTML, se necessário.
     window.carregarAgendamentos = carregarAgendamentos;
+
     window.mostrarTodos = () => {
         filtroStatus = "todos";
 
@@ -600,11 +566,10 @@ NEGOCIO_ID = negocio.id;
 
         renderizarAgendamentos();
     };
+
     window.sair = sair;
 
-    // -------------------------------------------------
     // 11. INICIAR
-    // -------------------------------------------------
 
     document.addEventListener("DOMContentLoaded", () => {
         configurarFiltroData();
