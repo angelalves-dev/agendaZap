@@ -192,9 +192,12 @@ function conectarCartoesAosServicos() {
             selecionarServicoPorId(servico.id);
         };
 
-        botao.setAttribute(
-            "aria-label",
-            `${servico.nome}, R$ ${formatarPreco(servico.preco)}`
+        <CodeBlock language="javascript" editable>
+if (campoServico) {
+    campoServico.textContent =
+        servico.nome + " - R$ " + formatarPreco(servico.preco);
+}
+</CodeBlock>
         );
     });
 }
