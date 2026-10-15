@@ -1,6 +1,8 @@
-```javascript
+
+"use strict";
+
 // ==========================================
-// CONFIGURAÇÃO DO SUPABASE
+// SUPABASE
 // ==========================================
 
 const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
@@ -12,7 +14,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 // ==========================================
-// BARBEARIA DA URL
+// BARBEARIA
 // ==========================================
 
 const parametros = new URLSearchParams(window.location.search);
@@ -27,147 +29,125 @@ let carregamentoConcluido = false;
 // INICIALIZAÇÃO
 // ==========================================
 
-document.addEventListener("DOMContentLoaded", async function () {
-    const campoData = document.getElementById("data");
-
-    if (campoData) {
-        const hoje = new Date();
-        
-campoData.min =
-    hoje.getFullYear() + "-" +
-    String(hoje.getMonth() + 1).padStart(2, "0") + "-" +
-    String(hoje.getDate()).padStart(2, "0");
-
-    }
-
-    // Primeiro, conectar os cartões existentes.
-    prepararCartoes();
-
-    // Depois, carregar os serviços reais do banco.
-    await carregarNegocioEServicos();
+document.addEventListener("DOMContentLoaded", function () {
+    definirDataMinima();
+    carregarNegocioEServicos();
 });
 
+function definirDataMinima() {
+    const campo = document.getElementById("data");
+    if (!campo) return;
+
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoje.getDate()).padStart(2, "0");
+
+    campo.min = ano + "-" + mes + "-" + dia;
+}
+
 // ==========================================
-// PREPARAR CARTÕES PARA RECEBER CLIQUES
+// UTILITÁRIOS
 // ==========================================
 
-
-function prepararCartoes() {
-    document.querySelectorAll(".servico").forEach(function (botao) {
-        botao.removeAttribute("onclick");
-        botao.hidden = false;
-        botao.disabled = true;
-
-        var titulo = botao.querySelector("h3");
-
-        if (titulo) {
-            botao.setAttribute(
-                "aria-label",
-                "Serviço: " + titulo.textContent.trim()
-            );
-        }
+function formatarPreco(preco) {
+    return Number(preco).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
 }
 
-
-
-const titulo = botao.querySelector("h3");
-
-if (titulo) {
-    botao.setAttribute(
-        "aria-label",
-        "Carregando serviço " + titulo.textContent.trim()
-    );
+function mostrarErro(mensagem) {
+    console.error(mensagem);
+    alert(mensagem);
 }
-
 
 // ==========================================
 // CARREGAR BARBEARIA E SERVIÇOS
 // ==========================================
 
 async function carregarNegocioEServicos() {
+    carregamentoConcluido = false;
+
     try {
-        const { data: negocio, error: erroNegocio } =
-            await supabaseClient
-                .from("negocios")
-                .select("id, nome, slug")
-                .eq("slug", slugNegocio)
-                .maybeSingle();
+        const resultadoNegocio = await supabaseClient
+            .from("negocios")
+            .select("id, nome, slug")
+            .eq("slug", slugNegocio)
+            .maybeSingle();
 
-        if (erroNegocio) throw erroNegocio;
-
-        if (!negocio) {
-            throw new Error(
-                "Barbearia não encontrada. Confira o link."
-            );
+        if (resultadoNegocio.error) {
+            throw resultadoNegocio.error;
         }
 
-        negocioAtual = negocio;
+        if (!resultadoNegocio.data) {
+            throw new Error("Barbearia não encontrada. Confira o link.");
+        }
 
-        const { data: servicos, error: erroServicos } =
-            await supabaseClient
-                .from("servicos")
-                .select("id, nome, descricao, preco")
-                .eq("negocio_id", negocio.id)
-                .eq("ativo", true);
+        negocioAtual = resultadoNegocio.data;
 
-        if (erroServicos) throw erroServicos;
+        const resultadoServicos = await supabaseClient
+            .from("servicos")
+            .select("id, nome, descricao, preco")
+            .eq("negocio_id", negocioAtual.id)
+            .eq("ativo", true);
 
-        servicosDisponiveis = servicos || [];
+        if (resultadoServicos.error) {
+            throw resultadoServicos.error;
+        }
 
-        // Associar os cartões pelos títulos h3.
-        conectarCartoesAosServicos();
+        servicosDisponiveis = resultadoServicos.data || [];
+
+        conectarCartoes();
 
         carregamentoConcluido = true;
 
-        console.log("Barbearia carregada:", negocio.nome);
-        console.log("Serviços carregados:", servicosDisponiveis);
+        console.log("Barbearia carregada:", negocioAtual.nome);
+        console.log("Serviços carregados:", servicosDisponiveis.length);
 
         if (servicosDisponiveis.length === 0) {
-            alert("Esta barbearia ainda não possui serviços cadastrados.");
+            mostrarErro("Esta barbearia ainda não possui serviços cadastrados.");
         }
-
     } catch (erro) {
-        console.error("Erro ao carregar serviços:", erro);
+        console.error("Erro ao carregar dados:", erro);
+        desativarCartoes();
 
-        // Manter os cartões visíveis, mas desativados
-        // até que os dados sejam carregados corretamente.
-        document.querySelectorAll(".servico").forEach(botao => {
-            botao.disabled = true;
-        });
-
-        alert(
-            "Não foi possível carregar os serviços.\n\n" +
-            erro.message
+        mostrarErro(
+            "Não foi possível carregar os serviços. " +
+            (erro.message || "Verifique a conexão.")
         );
     }
 }
 
 // ==========================================
-// ASSOCIAR CARTÕES AOS SERVIÇOS
+// CONECTAR OS CARTÕES AOS SERVIÇOS
 // ==========================================
 
-function conectarCartoesAosServicos() {
+function desativarCartoes() {
+    document.querySelectorAll(".servico").forEach(function (botao) {
+        botao.disabled = true;
+    });
+}
+
+function conectarCartoes() {
     const botoes = document.querySelectorAll(".servico");
 
-    botoes.forEach(botao => {
+    botoes.forEach(function (botao) {
         const titulo = botao.querySelector("h3");
-        const descricao = botao.querySelector("p");
-        const precoElemento = botao.querySelector("strong");
 
         if (!titulo) {
             botao.disabled = true;
             return;
         }
 
-        // Usar o título do cartão, não o onclick antigo.
         const nomeCartao = titulo.textContent.trim();
 
-        const servico = servicosDisponiveis.find(item =>
-            item.nome.trim().toLowerCase() ===
-            nomeCartao.toLowerCase()
-        );
+        const servico = servicosDisponiveis.find(function (item) {
+            return item.nome.trim().toLowerCase() ===
+                nomeCartao.toLowerCase();
+        });
 
+        // Não mostrar serviços que não pertencem a esta barbearia.
         if (!servico) {
             botao.hidden = true;
             botao.disabled = true;
@@ -177,74 +157,71 @@ function conectarCartoesAosServicos() {
         botao.hidden = false;
         botao.disabled = false;
 
+        const descricao = botao.querySelector("p");
+        const preco = botao.querySelector("strong");
+
         if (descricao && servico.descricao) {
             descricao.textContent = servico.descricao;
         }
 
-        if (precoElemento) {
-            precoElemento.textContent =
-                `R$ ${formatarPreco(servico.preco)}`;
+        if (preco) {
+            preco.textContent = "R$ " + formatarPreco(servico.preco);
         }
 
-        // Substituir completamente o evento antigo.
+        // Remover o evento inline antigo do HTML.
+        botao.removeAttribute("onclick");
+
+        // Conectar diretamente ao serviço do banco.
         botao.onclick = function (evento) {
             evento.preventDefault();
             selecionarServicoPorId(servico.id);
         };
-
-        <CodeBlock language="javascript" editable>
-if (campoServico) {
-    campoServico.textContent =
-        servico.nome + " - R$ " + formatarPreco(servico.preco);
-}
-</CodeBlock>
-        );
     });
 }
 
 // ==========================================
-// SELECIONAR SERVIÇO PELO ID REAL
+// SELECIONAR SERVIÇO
 // ==========================================
 
 function selecionarServicoPorId(id) {
     if (!carregamentoConcluido) {
-        alert("Aguarde os serviços terminarem de carregar.");
+        mostrarErro("Aguarde os serviços carregarem.");
         return;
     }
 
-    const servico = servicosDisponiveis.find(
-        item => String(item.id) === String(id)
-    );
+    const servico = servicosDisponiveis.find(function (item) {
+        return String(item.id) === String(id);
+    });
 
     if (!servico) {
-        alert("Serviço não encontrado. Atualize a página.");
+        mostrarErro("Serviço não encontrado. Atualize a página.");
         return;
     }
 
     servicoAtual = servico;
 
-    const campoServico =
-        document.getElementById("servicoSelecionado");
+    const campo = document.getElementById("servicoSelecionado");
 
-    if (campoServico) {
-        campoServico.textContent =
-            `${servico.nome} - R$ ${formatarPreco(servico.preco)}`;
+    if (campo) {
+        campo.textContent =
+            servico.nome + " - R$ " + formatarPreco(servico.preco);
     }
 
     abrirAgendamento();
 }
 
-// Compatibilidade com chamadas antigas no HTML.
+// Compatibilidade com os botões antigos do HTML.
 function selecionarServico(nome) {
-    const servico = servicosDisponiveis.find(
-        item => item.nome === nome
-    );
+    const servico = servicosDisponiveis.find(function (item) {
+        return item.nome === nome;
+    });
 
-    if (servico) {
-        selecionarServicoPorId(servico.id);
-    } else {
-        alert("Este serviço não está disponível.");
+    if (!servico) {
+        mostrarErro("Este serviço não está disponível.");
+        return;
     }
+
+    selecionarServicoPorId(servico.id);
 }
 
 // ==========================================
@@ -266,12 +243,12 @@ function abrirAgendamento() {
 
 async function confirmarAgendamento() {
     if (!carregamentoConcluido || !negocioAtual) {
-        alert("Aguarde o carregamento da barbearia.");
+        mostrarErro("Aguarde o carregamento da barbearia.");
         return;
     }
 
     if (!servicoAtual || !servicoAtual.id) {
-        alert("Selecione um serviço antes de continuar.");
+        mostrarErro("Escolha um serviço primeiro.");
         return;
     }
 
@@ -280,13 +257,13 @@ async function confirmarAgendamento() {
     const campoNome = document.getElementById("nome");
     const campoWhatsapp = document.getElementById("whatsapp");
 
-    const data = campoData?.value;
-    const horario = campoHorario?.value;
-    const nome = campoNome?.value.trim();
-    const whatsapp = campoWhatsapp?.value.trim();
+    const data = campoData ? campoData.value : "";
+    const horario = campoHorario ? campoHorario.value : "";
+    const nome = campoNome ? campoNome.value.trim() : "";
+    const whatsapp = campoWhatsapp ? campoWhatsapp.value.trim() : "";
 
     if (!data || !horario || !nome || !whatsapp) {
-        alert("Preencha todos os campos do agendamento.");
+        mostrarErro("Preencha todos os campos do agendamento.");
         return;
     }
 
@@ -299,49 +276,46 @@ async function confirmarAgendamento() {
     }
 
     try {
-        const { data: resultado, error } =
-            await supabaseClient.rpc(
-                "criar_agendamento_publico",
-                {
-                    p_slug: slugNegocio,
-                    p_servico_id: servicoAtual.id,
-                    p_data: data,
-                    p_horario: String(horario),
-                    p_nome: nome,
-                    p_whatsapp: whatsapp
-                }
-            );
+        const resposta = await supabaseClient.rpc(
+            "criar_agendamento_publico",
+            {
+                p_slug: slugNegocio,
+                p_servico_id: servicoAtual.id,
+                p_data: data,
+                p_horario: String(horario),
+                p_nome: nome,
+                p_whatsapp: whatsapp
+            }
+        );
 
-        if (error) throw error;
+        if (resposta.error) {
+            throw resposta.error;
+        }
 
-        console.log("Agendamento criado:", resultado);
-
-        alert("Agendamento realizado com sucesso!");
+        console.log("Agendamento criado:", resposta.data);
 
         const area = document.getElementById("agendamento");
-
         if (area) {
             area.classList.add("escondido");
         }
 
         const sucesso = document.getElementById("sucesso");
-
         if (sucesso) {
             sucesso.classList.remove("escondido");
             sucesso.scrollIntoView({ behavior: "smooth" });
         }
 
+        alert("Agendamento realizado com sucesso!");
+
         limparFormulario();
         servicoAtual = null;
-
     } catch (erro) {
         console.error("Erro ao criar agendamento:", erro);
 
-        alert(
-            "Não foi possível realizar o agendamento.\n\n" +
+        mostrarErro(
+            "Não foi possível realizar o agendamento: " +
             (erro.message || "Tente novamente.")
         );
-
     } finally {
         if (botaoConfirmar) {
             botaoConfirmar.disabled = false;
@@ -354,7 +328,7 @@ async function confirmarAgendamento() {
 // ==========================================
 
 function limparFormulario() {
-    ["data", "horario", "nome", "whatsapp"].forEach(id => {
+    ["data", "horario", "nome", "whatsapp"].forEach(function (id) {
         const campo = document.getElementById(id);
 
         if (campo) {
@@ -364,7 +338,7 @@ function limparFormulario() {
 }
 
 // ==========================================
-// VOLTAR PARA O INÍCIO
+// VOLTAR AO INÍCIO
 // ==========================================
 
 function voltarInicio() {
@@ -387,22 +361,20 @@ function voltarInicio() {
 
 async function testarConexao() {
     try {
-        const { data, error } = await supabaseClient
+        const resposta = await supabaseClient
             .from("negocios")
             .select("id")
             .eq("slug", slugNegocio)
             .maybeSingle();
 
-        if (error) {
-            console.error("Erro na conexão:", error);
+        if (resposta.error) {
+            console.error("Erro de conexão:", resposta.error);
             return false;
         }
 
-        return Boolean(data);
-
+        return Boolean(resposta.data);
     } catch (erro) {
         console.error("Erro inesperado:", erro);
         return false;
     }
 }
-```
