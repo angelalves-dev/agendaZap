@@ -39,6 +39,19 @@ main{max-width:1160px;margin:34px auto;padding:0 20px}.card{background:white;bor
 <div class="stat"><p>Faturamento previsto confirmado</p><strong id="revenue">R$ 0,00</strong></div>
 </div>
 <div class="card"><h2 class="section-title">Agendamentos recentes</h2><div id="statusMessage" class="notice hidden" role="status"></div><div id="appointments" class="table-wrap"><div class="empty">Carregando agendamentos…</div></div></div>
+<div class="card" style="margin-top:20px">
+ <div class="heading" style="margin-bottom:14px"><div><h2 class="section-title" style="margin-bottom:5px">Gerenciar serviços</h2><p class="muted" style="margin:0">Cadastre serviços e altere nomes, descrições e preços.</p></div><button id="newService" class="btn">+ Novo serviço</button></div>
+ <div id="serviceMessage" class="notice hidden" role="status"></div>
+ <form id="serviceForm" class="hidden" style="background:#f8faf8;border:1px solid #e4ebe6;border-radius:14px;padding:18px;margin-bottom:18px">
+  <h3 id="serviceFormTitle" style="margin:0 0 8px">Novo serviço</h3>
+  <input id="serviceId" type="hidden">
+  <label class="field" for="serviceName">Nome do serviço</label><input id="serviceName" maxlength="100" required placeholder="Ex.: Corte masculino">
+  <label class="field" for="serviceDescription">Descrição</label><input id="serviceDescription" maxlength="240" placeholder="Ex.: Corte tradicional">
+  <label class="field" for="servicePrice">Preço (R$)</label><input id="servicePrice" type="number" min="0" step="0.01" required placeholder="30,00">
+  <div class="actions" style="margin-top:16px"><button id="saveService" class="btn" type="submit">Salvar serviço</button><button id="cancelService" class="btn ghost" type="button">Cancelar</button></div>
+ </form>
+ <div id="servicesList"><div class="empty">Carregando serviços…</div></div>
+</div>
 </section>
 </main>
 <div class="footer">AgendaZap · Painel do estabelecimento</div>
@@ -83,6 +96,7 @@ async function loadDashboard(){
  business=businesses[0];
  $("businessName").textContent=business.nome||"Seus agendamentos";
  await loadBookings();
+ await loadServices();
 }
 async function loadBookings(){
  if(!business)return;
@@ -94,6 +108,64 @@ async function loadBookings(){
  }catch(err){message("statusMessage","Erro ao carregar agendamentos: "+(err.message||"verifique as permissões RLS."))}
  finally{$("refresh").disabled=false;$("refresh").textContent="↻ Atualizar"}
 }
+async function loadServices(){
+ if(!business)return;
+ clearMessage("serviceMessage");
+ $("servicesList").innerHTML='<div class="empty">Carregando serviços…</div>';
+ try{
+  const {data,error}=await db.from("servicos").select("id,nome,descricao,preco,ativo").eq("negocio_id",business.id).order("nome",{ascending:true});
+  if(error)throw error;
+  renderServices(data||[]);
+ }catch(err){
+  $("servicesList").innerHTML='<div class="empty">Não foi possível carregar os serviços.</div>';
+  message("serviceMessage","Erro ao carregar serviços. Confira as políticas RLS da tabela servicos. "+(err.message||""));
+ }
+}
+function renderServices(items){
+ if(!items.length){$("servicesList").innerHTML='<div class="empty">Nenhum serviço cadastrado ainda. Clique em “Novo serviço” para adicionar.</div>';return}
+ const rows=items.map(s=>'<tr><td><strong>'+safe(s.nome)+'</strong><span class="muted">'+safe(s.descricao||"Sem descrição")+'</span></td><td>'+money(s.preco)+'</td><td><span class="pill '+(s.ativo?'confirmado':'cancelado')+'">'+(s.ativo?'Ativo':'Inativo')+'</span></td><td><div class="actions"><button class="btn secondary" data-edit-service="'+safe(s.id)+'">Editar</button><button class="btn ghost" data-toggle-service="'+safe(s.id)+'" data-active="'+String(!!s.ativo)+'">'+(s.ativo?'Desativar':'Ativar')+'</button></div></td></tr>').join("");
+ $("servicesList").innerHTML='<div class="table-wrap"><table style="min-width:600px"><thead><tr><th>Serviço</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+ $("servicesList").querySelectorAll("[data-edit-service]").forEach(b=>b.addEventListener("click",()=>editService(b.dataset.editService,items)));
+ $("servicesList").querySelectorAll("[data-toggle-service]").forEach(b=>b.addEventListener("click",()=>toggleService(b.dataset.toggleService,b.dataset.active!=="true")));
+}
+function editService(id,items){
+ const s=items.find(x=>String(x.id)===String(id));if(!s)return;
+ $("serviceId").value=s.id;$("serviceName").value=s.nome||"";$("serviceDescription").value=s.descricao||"";$("servicePrice").value=Number(s.preco||0);
+ $("serviceFormTitle").textContent="Editar serviço";$("saveService").textContent="Salvar alterações";$("serviceForm").classList.remove("hidden");$("serviceName").focus();
+}
+function resetServiceForm(){
+ $("serviceForm").reset();$("serviceId").value="";$("serviceFormTitle").textContent="Novo serviço";$("saveService").textContent="Salvar serviço";$("serviceForm").classList.add("hidden");
+}
+$("newService").addEventListener("click",()=>{resetServiceForm();$("serviceForm").classList.remove("hidden");$("serviceName").focus()});
+$("cancelService").addEventListener("click",resetServiceForm);
+$("serviceForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!business)return;
+ const id=$("serviceId").value;
+ const nome=$("serviceName").value.trim();
+ const descricao=$("serviceDescription").value.trim();
+ const preco=Number($("servicePrice").value);
+ if(!nome||!Number.isFinite(preco)||preco<0){message("serviceMessage","Informe um nome e um preço válido.");return}
+ $("saveService").disabled=true;$("saveService").textContent="Salvando…";clearMessage("serviceMessage");
+ try{
+  const payload={nome,descricao,preco,negocio_id:business.id};
+  const result=id
+   ? await db.from("servicos").update({nome,descricao,preco}).eq("id",id).eq("negocio_id",business.id)
+   : await db.from("servicos").insert({...payload,ativo:true});
+  if(result.error)throw result.error;
+  resetServiceForm();await loadServices();
+  message("serviceMessage",id?"Serviço atualizado com sucesso.":"Serviço cadastrado com sucesso.");
+ }catch(err){message("serviceMessage","Não foi possível salvar. Confira se há políticas RLS para inserir/editar serviços. "+(err.message||""))}
+ finally{$("saveService").disabled=false;$("saveService").textContent=$("serviceId").value?"Salvar alterações":"Salvar serviço"}
+});
+async function toggleService(id,ativo){
+ clearMessage("serviceMessage");
+ try{
+  const {error}=await db.from("servicos").update({ativo}).eq("id",id).eq("negocio_id",business.id);
+  if(error)throw error;
+  await loadServices();message("serviceMessage",ativo?"Serviço ativado.":"Serviço desativado.");
+ }catch(err){message("serviceMessage","Não foi possível alterar o serviço. Confira a política UPDATE da tabela servicos. "+(err.message||""))}
+}
+
 function renderBookings(){
  const pending=bookings.filter(b=>(b.status||"pendente").toLowerCase()==="pendente").length;
  const confirmed=bookings.filter(b=>(b.status||"").toLowerCase()==="confirmado").reduce((sum,b)=>sum+Number(b.preco||0),0);
