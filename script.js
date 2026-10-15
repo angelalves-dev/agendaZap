@@ -31,6 +31,28 @@ let carregamentoConcluido = false;
 
 document.addEventListener("DOMContentLoaded", function () {
     definirDataMinima();
+    document.querySelectorAll(".servico").forEach(function (botao) {
+        botao.removeAttribute("onclick");
+        botao.disabled = true;
+        botao.addEventListener("click", function (evento) {
+            evento.preventDefault();
+            const titulo = botao.querySelector("h3");
+            if (!titulo) return;
+            if (!carregamentoConcluido) {
+                mostrarErro("Aguarde os serviços carregarem e tente novamente.");
+                return;
+            }
+            const nome = titulo.textContent.trim();
+            const servico = servicosDisponiveis.find(function (item) {
+                return normalizarNome(item.nome) === normalizarNome(nome);
+            });
+            if (!servico) {
+                mostrarErro("Não encontrei esse serviço no cadastro. Confira os serviços do negócio.");
+                return;
+            }
+            selecionarServicoPorId(servico.id);
+        });
+    });
     carregarNegocioEServicos();
 });
 
@@ -49,6 +71,12 @@ function definirDataMinima() {
 // ==========================================
 // UTILITÁRIOS
 // ==========================================
+
+function normalizarNome(nome) {
+    return String(nome || "").normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ").trim().toLowerCase();
+}
 
 function formatarPreco(preco) {
     return Number(preco).toLocaleString("pt-BR", {
@@ -143,8 +171,7 @@ function conectarCartoes() {
         const nomeCartao = titulo.textContent.trim();
 
         const servico = servicosDisponiveis.find(function (item) {
-            return item.nome.trim().toLowerCase() ===
-                nomeCartao.toLowerCase();
+            return normalizarNome(item.nome) === normalizarNome(nomeCartao);
         });
 
         // Não mostrar serviços que não pertencem a esta barbearia.
@@ -168,14 +195,8 @@ function conectarCartoes() {
             preco.textContent = "R$ " + formatarPreco(servico.preco);
         }
 
-        // Remover o evento inline antigo do HTML.
-        botao.removeAttribute("onclick");
-
-        // Conectar diretamente ao serviço do banco.
-        botao.onclick = function (evento) {
-            evento.preventDefault();
-            selecionarServicoPorId(servico.id);
-        };
+        // O evento foi conectado uma única vez na inicialização.
+        botao.disabled = false;
     });
 }
 
@@ -213,7 +234,7 @@ function selecionarServicoPorId(id) {
 // Compatibilidade com os botões antigos do HTML.
 function selecionarServico(nome) {
     const servico = servicosDisponiveis.find(function (item) {
-        return item.nome === nome;
+        return normalizarNome(item.nome) === normalizarNome(nome);
     });
 
     if (!servico) {
@@ -276,6 +297,10 @@ async function confirmarAgendamento() {
     }
 
     try {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(servicoAtual.id))) {
+            throw new Error("O serviço selecionado não possui um ID UUID válido. Recarregue a página e tente novamente.");
+        }
+
         const resposta = await supabaseClient.rpc(
             "criar_agendamento_publico",
             {
