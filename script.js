@@ -32,8 +32,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     if (campoData) {
         const hoje = new Date();
-        campoData.min =
-            `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+        
+campoData.min =
+    hoje.getFullYear() + "-" +
+    String(hoje.getMonth() + 1).padStart(2, "0") + "-" +
+    String(hoje.getDate()).padStart(2, "0");
+
     }
 
     // Primeiro, conectar os cartões existentes.
