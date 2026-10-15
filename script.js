@@ -31,28 +31,19 @@ let carregamentoConcluido = false;
 
 document.addEventListener("DOMContentLoaded", function () {
     definirDataMinima();
-    document.querySelectorAll(".servico").forEach(function (botao) {
-        botao.removeAttribute("onclick");
-        botao.disabled = true;
-        botao.addEventListener("click", function (evento) {
+    const gradeServicos = document.querySelector(".servicos-grid");
+    if (gradeServicos) {
+        gradeServicos.addEventListener("click", function (evento) {
+            const botao = evento.target.closest(".servico");
+            if (!botao) return;
             evento.preventDefault();
-            const titulo = botao.querySelector("h3");
-            if (!titulo) return;
             if (!carregamentoConcluido) {
                 mostrarErro("Aguarde os serviços carregarem e tente novamente.");
                 return;
             }
-            const nome = titulo.textContent.trim();
-            const servico = servicosDisponiveis.find(function (item) {
-                return normalizarNome(item.nome) === normalizarNome(nome);
-            });
-            if (!servico) {
-                mostrarErro("Não encontrei esse serviço no cadastro. Confira os serviços do negócio.");
-                return;
-            }
-            selecionarServicoPorId(servico.id);
+            selecionarServicoPorId(botao.dataset.servicoId);
         });
-    });
+    }
     carregarNegocioEServicos();
 });
 
@@ -158,51 +149,34 @@ function desativarCartoes() {
 }
 
 function conectarCartoes() {
-    const botoes = document.querySelectorAll(".servico");
+    const grade = document.querySelector(".servicos-grid");
+    if (!grade) return;
 
-    botoes.forEach(function (botao) {
-        const titulo = botao.querySelector("h3");
+    grade.innerHTML = "";
 
-        if (!titulo) {
-            botao.disabled = true;
-            return;
-        }
+    servicosDisponiveis.forEach(function (servico) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "servico";
+        botao.dataset.servicoId = String(servico.id);
 
-        const nomeCartao = titulo.textContent.trim();
+        const icone = document.createElement("div");
+        icone.className = "icone";
+        icone.textContent = "✦";
 
-        const servico = servicosDisponiveis.find(function (item) {
-            return normalizarNome(item.nome) === normalizarNome(nomeCartao);
-        });
+        const titulo = document.createElement("h3");
+        titulo.textContent = servico.nome || "Serviço";
 
-        // Não mostrar serviços que não pertencem a esta barbearia.
-        if (!servico) {
-            botao.hidden = true;
-            botao.disabled = true;
-            return;
-        }
+        const descricao = document.createElement("p");
+        descricao.textContent = servico.descricao || "Agende este serviço";
 
-        botao.hidden = false;
-        botao.disabled = false;
+        const preco = document.createElement("strong");
+        preco.textContent = "R$ " + formatarPreco(servico.preco);
 
-        const descricao = botao.querySelector("p");
-        const preco = botao.querySelector("strong");
-
-        if (descricao && servico.descricao) {
-            descricao.textContent = servico.descricao;
-        }
-
-        if (preco) {
-            preco.textContent = "R$ " + formatarPreco(servico.preco);
-        }
-
-        // O evento foi conectado uma única vez na inicialização.
-        botao.disabled = false;
+        botao.append(icone, titulo, descricao, preco);
+        grade.appendChild(botao);
     });
 }
-
-// ==========================================
-// SELECIONAR SERVIÇO
-// ==========================================
 
 function selecionarServicoPorId(id) {
     if (!carregamentoConcluido) {
