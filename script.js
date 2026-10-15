@@ -75,16 +75,16 @@ function prepararCartoes() {
     });
 }
 
-// ==========================================
-// FORMATAR PREÇO
-// ==========================================
 
-function formatarPreco(preco) {
-    return Number(preco).toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+const titulo = botao.querySelector("h3");
+
+if (titulo) {
+    botao.setAttribute(
+        "aria-label",
+        "Carregando serviço " + titulo.textContent.trim()
+    );
 }
+
 
 // ==========================================
 // CARREGAR BARBEARIA E SERVIÇOS
