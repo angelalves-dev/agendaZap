@@ -166,6 +166,15 @@ async function toggleService(id,ativo){
  }catch(err){message("serviceMessage","Não foi possível alterar o serviço. Confira a política UPDATE da tabela servicos. "+(err.message||""))}
 }
 
+function whatsappUrl(phone, booking){
+ const digits=String(phone||"").replace(/\\D/g,"");
+ if(!digits)return "";
+ const international=digits.startsWith("55")?digits:(digits.length===10||digits.length===11?"55"+digits:digits);
+ const date=booking.data?new Date(booking.data+"T12:00:00").toLocaleDateString("pt-BR"):"data a combinar";
+ const status=(booking.status||"pendente").toLowerCase();
+ const text="Olá, "+(booking.nome||"tudo bem")+"! Aqui é da "+(business?.nome||"equipe do estabelecimento")+". Sobre seu agendamento de "+(booking.servico||"serviço")+" para "+date+" às "+(booking.horario||"horário a combinar")+". Status atual: "+status+". Podemos ajudar em algo?";
+ return "https://wa.me/"+international+"?text="+encodeURIComponent(text);
+}
 function renderBookings(){
  const pending=bookings.filter(b=>(b.status||"pendente").toLowerCase()==="pendente").length;
  const confirmed=bookings.filter(b=>(b.status||"").toLowerCase()==="confirmado").reduce((sum,b)=>sum+Number(b.preco||0),0);
@@ -176,7 +185,9 @@ function renderBookings(){
   const cls=status==="confirmado"?"confirmado":status==="cancelado"?"cancelado":"";
   const date=b.data?new Date(b.data+"T12:00:00").toLocaleDateString("pt-BR"):"—";
   const actions=status==="cancelado"?'': '<button class="btn secondary" data-id="'+safe(b.id)+'" data-status="confirmado">Confirmar</button><button class="btn ghost" data-id="'+safe(b.id)+'" data-status="cancelado">Cancelar</button>';
-  return '<tr><td><strong>'+safe(b.nome)+'</strong><span class="muted">'+safe(b.whatsapp)+'</span></td><td>'+safe(b.servico)+'<br><strong>'+money(b.preco)+'</strong></td><td>'+date+'</td><td>'+safe(b.horario)+'</td><td><span class="pill '+cls+'">'+safe(status)+'</span></td><td><div class="actions">'+actions+'</div></td></tr>';
+  const wa=whatsappUrl(b.whatsapp,b);
+  const contact=wa?'<a class="btn" style="text-decoration:none;display:inline-block" href="'+safe(wa)+'" target="_blank" rel="noopener noreferrer">WhatsApp</a>':'';
+  return '<tr><td><strong>'+safe(b.nome)+'</strong><span class="muted">'+safe(b.whatsapp)+'</span></td><td>'+safe(b.servico)+'<br><strong>'+money(b.preco)+'</strong></td><td>'+date+'</td><td>'+safe(b.horario)+'</td><td><span class="pill '+cls+'">'+safe(status)+'</span></td><td><div class="actions">'+contact+actions+'</div></td></tr>';
  }).join("");
  $("appointments").innerHTML='<table><thead><tr><th>Cliente</th><th>Serviço</th><th>Data</th><th>Horário</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>';
  $("appointments").querySelectorAll("button[data-id]").forEach(button=>button.addEventListener("click",()=>updateStatus(button.dataset.id,button.dataset.status)));
