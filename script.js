@@ -51,29 +51,24 @@ campoData.min =
 // PREPARAR CARTÕES PARA RECEBER CLIQUES
 // ==========================================
 
-function prepararCartoes() {
-    document.querySelectorAll(".servico").forEach(botao => {
-        // Remover o onclick antigo do HTML.
-        botao.removeAttribute("onclick");
 
-        // Não esconder os cartões enquanto carregam.
+function prepararCartoes() {
+    document.querySelectorAll(".servico").forEach(function (botao) {
+        botao.removeAttribute("onclick");
         botao.hidden = false;
         botao.disabled = true;
 
-        // Impedir que cliques antigos continuem ativos.
-        botao.onclick = null;
-
-        // Mostrar uma mensagem de carregamento.
-        const titulo = botao.querySelector("h3");
+        var titulo = botao.querySelector("h3");
 
         if (titulo) {
             botao.setAttribute(
                 "aria-label",
-                `Carregando serviço ${titulo.textContent.trim()}`
+                "Serviço: " + titulo.textContent.trim()
             );
         }
     });
 }
+
 
 
 const titulo = botao.querySelector("h3");
