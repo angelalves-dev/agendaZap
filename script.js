@@ -12,7 +12,7 @@ const supabaseClient = window.supabase.createClient(
 );
 
 // ==========================================
-// IDENTIFICAR A BARBEARIA PELA URL
+// BARBEARIA DA URL
 // ==========================================
 
 const parametros = new URLSearchParams(window.location.search);
@@ -21,6 +21,7 @@ const slugNegocio = parametros.get("negocio") || "agenda-angel";
 let negocioAtual = null;
 let servicosDisponiveis = [];
 let servicoAtual = null;
+let carregamentoConcluido = false;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -31,18 +32,47 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     if (campoData) {
         const hoje = new Date();
-        const ano = hoje.getFullYear();
-        const mes = String(hoje.getMonth() + 1).padStart(2, "0");
-        const dia = String(hoje.getDate()).padStart(2, "0");
-
-        campoData.min = `${ano}-${mes}-${dia}`;
+        campoData.min =
+            `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     }
 
+    // Primeiro, conectar os cartões existentes.
+    prepararCartoes();
+
+    // Depois, carregar os serviços reais do banco.
     await carregarNegocioEServicos();
 });
 
 // ==========================================
-// FORMATAÇÃO
+// PREPARAR CARTÕES PARA RECEBER CLIQUES
+// ==========================================
+
+function prepararCartoes() {
+    document.querySelectorAll(".servico").forEach(botao => {
+        // Remover o onclick antigo do HTML.
+        botao.removeAttribute("onclick");
+
+        // Não esconder os cartões enquanto carregam.
+        botao.hidden = false;
+        botao.disabled = true;
+
+        // Impedir que cliques antigos continuem ativos.
+        botao.onclick = null;
+
+        // Mostrar uma mensagem de carregamento.
+        const titulo = botao.querySelector("h3");
+
+        if (titulo) {
+            botao.setAttribute(
+                "aria-label",
+                `Carregando serviço ${titulo.textContent.trim()}`
+            );
+        }
+    });
+}
+
+// ==========================================
+// FORMATAR PREÇO
 // ==========================================
 
 function formatarPreco(preco) {
@@ -68,9 +98,9 @@ async function carregarNegocioEServicos() {
         if (erroNegocio) throw erroNegocio;
 
         if (!negocio) {
-            desativarServicos();
-            alert("Barbearia não encontrada. Confira o link.");
-            return;
+            throw new Error(
+                "Barbearia não encontrada. Confira o link."
+            );
         }
 
         negocioAtual = negocio;
@@ -86,60 +116,67 @@ async function carregarNegocioEServicos() {
 
         servicosDisponiveis = servicos || [];
 
-        atualizarCartoesDeServicos();
+        // Associar os cartões pelos títulos h3.
+        conectarCartoesAosServicos();
+
+        carregamentoConcluido = true;
+
+        console.log("Barbearia carregada:", negocio.nome);
+        console.log("Serviços carregados:", servicosDisponiveis);
 
         if (servicosDisponiveis.length === 0) {
             alert("Esta barbearia ainda não possui serviços cadastrados.");
         }
 
     } catch (erro) {
-        console.error("Erro ao carregar barbearia:", erro);
-        desativarServicos();
-        alert("Não foi possível carregar os serviços. Tente novamente.");
+        console.error("Erro ao carregar serviços:", erro);
+
+        // Manter os cartões visíveis, mas desativados
+        // até que os dados sejam carregados corretamente.
+        document.querySelectorAll(".servico").forEach(botao => {
+            botao.disabled = true;
+        });
+
+        alert(
+            "Não foi possível carregar os serviços.\n\n" +
+            erro.message
+        );
     }
 }
 
 // ==========================================
-// MOSTRAR SERVIÇOS
+// ASSOCIAR CARTÕES AOS SERVIÇOS
 // ==========================================
 
-function desativarServicos() {
-    document.querySelectorAll(".servico").forEach(botao => {
-        botao.hidden = true;
-    });
-}
-
-function atualizarCartoesDeServicos() {
+function conectarCartoesAosServicos() {
     const botoes = document.querySelectorAll(".servico");
 
     botoes.forEach(botao => {
-        // Guardar o nome original antes de remover o onclick.
-        const onclickOriginal = botao.getAttribute("onclick") || "";
+        const titulo = botao.querySelector("h3");
+        const descricao = botao.querySelector("p");
+        const precoElemento = botao.querySelector("strong");
 
-        const resultado = onclickOriginal.match(
-            /selecionarServico\(\s*['"]([^'"]+)['"]/
-        );
-
-        if (!resultado) {
-            botao.hidden = true;
+        if (!titulo) {
+            botao.disabled = true;
             return;
         }
 
-        const nomeHtml = resultado[1];
+        // Usar o título do cartão, não o onclick antigo.
+        const nomeCartao = titulo.textContent.trim();
 
-        const servico = servicosDisponiveis.find(
-            item => item.nome === nomeHtml
+        const servico = servicosDisponiveis.find(item =>
+            item.nome.trim().toLowerCase() ===
+            nomeCartao.toLowerCase()
         );
 
-        if (!servico || !servico.id) {
+        if (!servico) {
             botao.hidden = true;
+            botao.disabled = true;
             return;
         }
 
         botao.hidden = false;
-
-        const descricao = botao.querySelector("p");
-        const precoElemento = botao.querySelector("strong");
+        botao.disabled = false;
 
         if (descricao && servico.descricao) {
             descricao.textContent = servico.descricao;
@@ -150,37 +187,35 @@ function atualizarCartoesDeServicos() {
                 `R$ ${formatarPreco(servico.preco)}`;
         }
 
-        // Remover o evento inline para não enviar argumentos antigos.
-        botao.removeAttribute("onclick");
-
-        // Usar diretamente o registro recebido do Supabase.
-        botao.onclick = function () {
+        // Substituir completamente o evento antigo.
+        botao.onclick = function (evento) {
+            evento.preventDefault();
             selecionarServicoPorId(servico.id);
         };
+
+        botao.setAttribute(
+            "aria-label",
+            `${servico.nome}, R$ ${formatarPreco(servico.preco)}`
+        );
     });
 }
 
 // ==========================================
-// SELECIONAR SERVIÇO PELO UUID
+// SELECIONAR SERVIÇO PELO ID REAL
 // ==========================================
 
 function selecionarServicoPorId(id) {
+    if (!carregamentoConcluido) {
+        alert("Aguarde os serviços terminarem de carregar.");
+        return;
+    }
+
     const servico = servicosDisponiveis.find(
         item => String(item.id) === String(id)
     );
 
     if (!servico) {
-        alert("Serviço não encontrado. Atualize a página e tente novamente.");
-        return;
-    }
-
-    // Garantir que o serviço selecionado tenha um UUID.
-    const uuidValido =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-    if (!uuidValido.test(String(servico.id))) {
-        console.error("ID inválido recebido do Supabase:", servico.id);
-        alert("O identificador do serviço está inválido. Avise o responsável.");
+        alert("Serviço não encontrado. Atualize a página.");
         return;
     }
 
@@ -197,22 +232,21 @@ function selecionarServicoPorId(id) {
     abrirAgendamento();
 }
 
-// Compatibilidade com chamadas antigas do HTML.
+// Compatibilidade com chamadas antigas no HTML.
 function selecionarServico(nome) {
     const servico = servicosDisponiveis.find(
         item => item.nome === nome
     );
 
-    if (!servico) {
+    if (servico) {
+        selecionarServicoPorId(servico.id);
+    } else {
         alert("Este serviço não está disponível.");
-        return;
     }
-
-    selecionarServicoPorId(servico.id);
 }
 
 // ==========================================
-// ABRIR AGENDAMENTO
+// ABRIR FORMULÁRIO
 // ==========================================
 
 function abrirAgendamento() {
@@ -229,20 +263,20 @@ function abrirAgendamento() {
 // ==========================================
 
 async function confirmarAgendamento() {
-    const campoData = document.getElementById("data");
-    const campoHorario = document.getElementById("horario");
-    const campoNome = document.getElementById("nome");
-    const campoWhatsapp = document.getElementById("whatsapp");
-
-    if (!negocioAtual) {
+    if (!carregamentoConcluido || !negocioAtual) {
         alert("Aguarde o carregamento da barbearia.");
         return;
     }
 
     if (!servicoAtual || !servicoAtual.id) {
-        alert("Escolha um serviço antes de continuar.");
+        alert("Selecione um serviço antes de continuar.");
         return;
     }
+
+    const campoData = document.getElementById("data");
+    const campoHorario = document.getElementById("horario");
+    const campoNome = document.getElementById("nome");
+    const campoWhatsapp = document.getElementById("whatsapp");
 
     const data = campoData?.value;
     const horario = campoHorario?.value;
@@ -251,15 +285,6 @@ async function confirmarAgendamento() {
 
     if (!data || !horario || !nome || !whatsapp) {
         alert("Preencha todos os campos do agendamento.");
-        return;
-    }
-
-    const uuidValido =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-    if (!uuidValido.test(String(servicoAtual.id))) {
-        console.error("UUID de serviço inválido:", servicoAtual.id);
-        alert("O serviço selecionado possui um identificador inválido.");
         return;
     }
 
@@ -272,25 +297,18 @@ async function confirmarAgendamento() {
     }
 
     try {
-        // Enviar o UUID real do serviço cadastrado no banco.
-        const argumentos = {
-            p_slug: slugNegocio,
-            p_servico_id: String(servicoAtual.id),
-            p_data: data,
-            p_horario: String(horario),
-            p_nome: nome,
-            p_whatsapp: whatsapp
-        };
-
-        console.log("Enviando agendamento:", {
-            ...argumentos,
-            p_whatsapp: "[oculto]"
-        });
-
-        const { data: resultado, error } = await supabaseClient.rpc(
-            "criar_agendamento_publico",
-            argumentos
-        );
+        const { data: resultado, error } =
+            await supabaseClient.rpc(
+                "criar_agendamento_publico",
+                {
+                    p_slug: slugNegocio,
+                    p_servico_id: servicoAtual.id,
+                    p_data: data,
+                    p_horario: String(horario),
+                    p_nome: nome,
+                    p_whatsapp: whatsapp
+                }
+            );
 
         if (error) throw error;
 
