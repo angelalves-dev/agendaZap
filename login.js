@@ -30,9 +30,22 @@ async function garantirNegocio(user, nomeInformado = "") {
     const { data: existentes, error: buscaErro } = await supabaseClient
         .from("negocios").select("id,nome,slug").eq("dono_id", user.id).limit(1);
     if (buscaErro) throw new Error("Não consegui verificar seu estabelecimento. Confira as permissões da tabela negocios no Supabase. " + buscaErro.message);
-    if (existentes && existentes.length) return existentes[0];
 
     const nome = String(nomeInformado || user.user_metadata?.business_name || "").trim();
+    if (existentes && existentes.length) {
+        const atual = existentes[0];
+        // Um gatilho antigo pode ter criado "Meu negócio" antes do cadastro.
+        // Nesse caso, sincroniza o nome escolhido no formulário de cadastro.
+        if (nome && (!atual.nome || atual.nome.trim().toLowerCase() === "meu negócio" || atual.nome.trim().toLowerCase() === "meu negocio")) {
+            const slug = slugBase(nome) + "-" + String(user.id).replace(/-/g, "").slice(0, 6);
+            const { data: atualizado, error: atualizarErro } = await supabaseClient
+                .from("negocios").update({ nome, slug }).eq("id", atual.id)
+                .select("id,nome,slug").single();
+            if (atualizarErro) throw new Error("Encontrei seu estabelecimento, mas não consegui atualizar o nome. Confira a política UPDATE da tabela negocios no Supabase. " + atualizarErro.message);
+            return atualizado;
+        }
+        return atual;
+    }
     if (!nome) return null;
     const slug = slugBase(nome) + "-" + String(user.id).replace(/-/g, "").slice(0, 6);
     const { data, error } = await supabaseClient.from("negocios")
