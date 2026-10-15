@@ -297,27 +297,23 @@ async function confirmarAgendamento() {
     }
 
     try {
-        // Os IDs retornados pela tabela servicos são numéricos (ex.: 16),
-        // mas a função SQL antiga espera UUID. Inserimos usando os dados
-        // reais do serviço e o negócio carregado.
-        const resposta = await supabaseClient
-            .from("agendamentos")
-            .insert({
-                negocio_id: negocioAtual.id,
-                servico: servicoAtual.nome,
-                preco: Number(servicoAtual.preco),
-                data: data,
-                horario: String(horario),
-                nome: nome,
-                whatsapp: whatsapp,
-                status: "pendente"
-            });
+        const resposta = await supabaseClient.rpc(
+            "criar_agendamento_publico",
+            {
+                p_slug: slugNegocio,
+                p_servico_id: String(servicoAtual.id),
+                p_data: data,
+                p_horario: String(horario),
+                p_nome: nome,
+                p_whatsapp: whatsapp
+            }
+        );
 
         if (resposta.error) {
             throw resposta.error;
         }
 
-        console.log("Agendamento criado com sucesso.");
+        console.log("Agendamento criado:", resposta.data);
 
         const area = document.getElementById("agendamento");
         if (area) {
