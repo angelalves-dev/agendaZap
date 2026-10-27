@@ -108,8 +108,15 @@ loginForm.addEventListener("submit", async function (event) {
                     await supabaseClient.auth.signOut();
                     return;
                 }
-                mostrarMensagem("Login realizado! Abrindo seu painel...", "sucesso-login");
-                window.location.href = "admin.html";
+                mostrarMensagem("Login realizado! Abrindo...", "sucesso-login");
+
+const destino = new URLSearchParams(window.location.search).get("redirect");
+
+if (destino === "assinar") {
+    window.location.href = "assinar.html";
+} else {
+    window.location.href = "admin.html";
+}
             }
         }
     } catch (erro) {
