@@ -1,3 +1,6 @@
+
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,9 +11,7 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -69,9 +70,7 @@
             letter-spacing: -1.5px;
         }
 
-        .assinar-texto h1 span {
-            color: #087f5b;
-        }
+        .assinar-texto h1 span { color: #087f5b; }
 
         .assinar-texto > p {
             color: #5d716a;
@@ -144,8 +143,11 @@
             transition: background 0.2s;
         }
 
-        .assinar-botao:hover {
-            background: #066b4d;
+        .assinar-botao:hover { background: #066b4d; }
+
+        .assinar-botao:disabled {
+            opacity: 0.7;
+            cursor: wait;
         }
 
         .assinar-rodape {
@@ -162,26 +164,19 @@
                 padding-top: 45px;
             }
 
-            .assinar-texto h1 {
-                font-size: 38px;
-            }
-
-            .assinar-card {
-                padding: 25px;
-            }
+            .assinar-texto h1 { font-size: 38px; }
+            .assinar-card { padding: 25px; }
         }
     </style>
 </head>
 
 <body>
-
     <header class="assinar-header">
         <a href="index.html" class="assinar-logo">AgendaZap</a>
         <a href="login.html" class="assinar-login">Entrar na conta</a>
     </header>
 
     <main class="assinar-principal">
-
         <section class="assinar-texto">
             <span class="assinar-etiqueta">MAIS ORGANIZAÇÃO PARA SEU NEGÓCIO</span>
 
@@ -228,6 +223,7 @@
             >
                 Assinar AgendaZap
             </button>
+
             <p class="assinar-nota" id="mensagemAssinatura" role="status" aria-live="polite">
                 Entre na sua conta para continuar para o pagamento seguro.
             </p>
@@ -236,7 +232,6 @@
                 O pagamento é realizado em uma página externa do Mercado Pago.
             </p>
         </section>
-
     </main>
 
     <footer class="assinar-rodape">
@@ -244,59 +239,96 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
-      (() => {
+    (() => {
         const SUPABASE_URL = "https://xebtgiabbansfuutpzuf.supabase.co";
         const SUPABASE_KEY = "sb_publishable_Kvl6OcLGFthJKBkkruVIfw_ILvT6g-j";
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // false = produção; true = teste.
+        // Não altere para true na versão pública do site.
+        const MODO_TESTE = false;
+
+        const FUNCAO_ASSINATURA = MODO_TESTE
+            ? "criar-assinatura-teste"
+            : "criar-assinatura";
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
+
         const botao = document.getElementById("btnAssinar");
         const mensagem = document.getElementById("mensagemAssinatura");
 
         botao.addEventListener("click", async () => {
-          botao.disabled = true;
-          botao.textContent = "Verificando sua conta...";
-          mensagem.textContent = "";
+            botao.disabled = true;
+            botao.textContent = "Verificando sua conta...";
+            mensagem.textContent = "";
 
-          try {
-            const { data: { session }, error: sessaoErro } = await supabaseClient.auth.getSession();
-            if (sessaoErro) throw sessaoErro;
+            try {
+                const {
+                    data: { session },
+                    error: sessaoErro
+                } = await supabaseClient.auth.getSession();
 
-            if (!session) {
-              mensagem.textContent = "Entre na sua conta primeiro. Depois volte a esta página para assinar.";
-              window.location.href = "login.html?redirect=assinar.html";
-              return;
-            }
+                if (sessaoErro) throw sessaoErro;
 
-            botao.textContent = "Preparando assinatura...";
-            const { data, error } = await supabaseClient.functions.invoke("criar-assinatura", {
-              body: {}
-            });
+                if (!session) {
+                    mensagem.textContent =
+                        "Entre na sua conta primeiro. Depois volte a esta página para assinar.";
 
-            if (error) {
-              let detalhe = error.message || "Não foi possível iniciar a assinatura.";
-              try {
-                const contexto = error.context;
-                if (contexto && typeof contexto.json === "function") {
-                  const corpo = await contexto.json();
-                  if (corpo && corpo.erro) detalhe = corpo.erro;
+                    window.location.href = "login.html?redirect=assinar.html";
+                    return;
                 }
-              } catch (_) {}
-              throw new Error(detalhe);
-            }
 
-            if (!data || !data.link_assinatura) {
-              throw new Error((data && data.erro) || "O Mercado Pago não retornou o link de pagamento.");
-            }
+                botao.textContent = "Preparando assinatura...";
 
-            window.location.href = data.link_assinatura;
-          } catch (erro) {
-            console.error("Erro ao iniciar assinatura:", erro);
-            mensagem.textContent = erro.message || "Ocorreu um erro. Tente novamente.";
-            botao.disabled = false;
-            botao.textContent = "Tentar novamente";
-          }
+                const { data, error } =
+                    await supabaseClient.functions.invoke(
+                        FUNCAO_ASSINATURA,
+                        { body: {} }
+                    );
+
+                if (error) {
+                    let detalhe =
+                        error.message || "Não foi possível iniciar a assinatura.";
+
+                    try {
+                        const contexto = error.context;
+
+                        if (contexto && typeof contexto.json === "function") {
+                            const corpo = await contexto.json();
+
+                            if (corpo && corpo.erro) {
+                                detalhe = corpo.erro;
+                            }
+                        }
+                    } catch (_) {}
+
+                    throw new Error(detalhe);
+                }
+
+                if (!data || !data.link_assinatura) {
+                    throw new Error(
+                        (data && data.erro) ||
+                        "O Mercado Pago não retornou o link de pagamento."
+                    );
+                }
+
+                window.location.href = data.link_assinatura;
+            } catch (erro) {
+                console.error("Erro ao iniciar assinatura:", erro);
+
+                mensagem.textContent =
+                    erro.message || "Ocorreu um erro. Tente novamente.";
+
+                botao.disabled = false;
+                botao.textContent = "Tentar novamente";
+            }
         });
-      })();
+    })();
     </script>
 </body>
 </html>
+```
