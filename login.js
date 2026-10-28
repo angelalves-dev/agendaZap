@@ -112,7 +112,7 @@ loginForm.addEventListener("submit", async function (event) {
 
 const destino = new URLSearchParams(window.location.search).get("redirect");
 
-if (destino === "assinar") {
+if (destino === "assinar" || destino === "assinar.html") {
     window.location.href = "assinar.html";
 } else {
     window.location.href = "admin.html";
